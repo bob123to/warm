@@ -1,13 +1,5 @@
 [
   {
-    "title": "TurboWarp",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/ztr5zheq0g4vdlo3vpmzv/turbowarp.zip?rlkey=uneustwwxnboaewal99rlqanf&st=866pb3fz",
-    "tag": "Scratch",
-    "type": "zip",
-    "entry": "main/index.html",
-    "icon": "thumbnails/turbowarp.png"
-  },
-  {
     "title": "Subway Surfers",
     "url": "https://dl.dropboxusercontent.com/scl/fi/sc70xz77rcbvo4pncr5ic/subway-surfers-all-in-one.html?rlkey=8rx2lyab8jv3p9955a4znooz6&st=2njd2q68",
     "tag": "Platformer",
@@ -16,13 +8,39 @@
     "variant": "San Francisco"
   },
   {
-    "title": "Buckshot Roulette",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/0pj6tx7kqf0ek69omodeh/buckshot.zip?rlkey=1pgdxccbt15r4sqswe4oj7eos&st=vnf65aa4",
-    "tag": "Luck",
+    "title": "Subway Surfers",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/pm542yj9pcbursttiv1iv/subwaysurfershavana.html?rlkey=847eueto8dh39wmfot3rai30n&dl=0",
+    "tag": "Platformer",
+    "icon": "thumbnails/subway-surfers.png",
+    "group": "subway-surfers",
+    "variant": "Shavana"
+  },
+  {
+    "title": "Subway Surfers",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/q06rfx7oij7vaghx5w7gw/subwaysurfersbeijing.html?rlkey=5zlxe5t35hqn7yqoggdd93bb6&st=1wpc6buk",
+    "tag": "Platformer",
+    "icon": "thumbnails/subway-surfers.png",
+    "group": "subway-surfers",
+    "variant": "Beijing"
+  },
+  {
+    "title": "Ultrakill",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/75px8ozbd8nzx0kqw7uuk/ultrakill.zip?rlkey=gjgay5ejdjzs79rj73ctyis8i&st=bdty2whc",
+    "tag": "Fps",
+    "type": "zip",
+    "icon": "thumbnails/ultrakill.png"
+  },
+  {
+    "title": "Buckshot roulette",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/0pj6tx7kqf0ek69omodeh/buckshot.zip?rlkey=1pgdxccbt15r4sqswe4oj7eos&st=2fp9rg3p",
     "type": "zip",
     "icon": "thumbnails/buckshot-roulette.png",
-    "wip": true,
-    "locked": true
+    "wip": true
+  },
+  {
+    "title": "Truck driving",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/gqqnj4umxxw5zq8hn8fbt/Truck-Driving-Challenge.html?rlkey=tlqn367r2k0tmmgfi0ux2nvl8&st=y3z5myc9",
+    "icon": "thumbnails/truck-driving.png"
   },
   {
     "title": "Minecraft 1.8",
@@ -49,50 +67,30 @@
     "variant": "Paper"
   },
   {
-    "title": "Ultrakill",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/75px8ozbd8nzx0kqw7uuk/ultrakill.zip?rlkey=gjgay5ejdjzs79rj73ctyis8i&st=bdty2whc",
-    "tag": "Fps",
-    "type": "zip",
-    "icon": "thumbnails/ultrakill.png"
-  },
-  {
     "title": "Slope 3D",
     "url": "https://dl.dropboxusercontent.com/scl/fi/9qb1jyzsght9g5y65q8zz/slope3d.html?rlkey=4dagmkqfi665uykzf86bkzq2y&st=rq9l8tbk",
     "tag": "Platformer",
     "icon": "thumbnails/slope-3d.jpg"
   },
   {
-    "title": "Truck driving",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/gqqnj4umxxw5zq8hn8fbt/Truck-Driving-Challenge.html?rlkey=tlqn367r2k0tmmgfi0ux2nvl8&st=y3z5myc9",
-    "tag": "Driving",
-    "icon": "thumbnails/truck-driving.png"
-  },
-  {
     "title": "Downgrade 2",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/ajudjdbr9tlkq5ra951n5/DOWNGRADE-2-Online-Shooter-Cloud-PvP-DG2-v1.7.7.7.html?rlkey=zhjeaclgqf36xaeh38do6hfwa&st=35dvsp4i",
+    "url": "https://www.dropbox.com/scl/fi/ajudjdbr9tlkq5ra951n5/DOWNGRADE-2-Online-Shooter-Cloud-PvP-DG2-v1.7.7.7.html?rlkey=zhjeaclgqf36xaeh38do6hfwa&dl=0",
     "tag": "Fps",
     "icon": "thumbnails/downgrade-2.png"
   },
   {
     "title": "Friday Night Funkin",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/wtgm5nvvo3nhcg2w067p0/fnf.html?rlkey=i61fd2m8b9v0h2y82k000pxsh&st=d9qw224i",
+    "url": "https://www.dropbox.com/scl/fi/wtgm5nvvo3nhcg2w067p0/fnf.html?rlkey=i61fd2m8b9v0h2y82k000pxsh&dl=0",
     "tag": "Rhythm",
-    "icon": "thumbnails/friday-night-funkin.png"
+    "icon": "thumbnails/friday-night-funkin.png",
+    "wip": true
   },
   {
     "title": "Tap Road",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/wl2p7vwhm2uai7gieidk9/taproad.zip?rlkey=6nawchqg7o7tzzutfvtlfhtpn&st=z1awvavn",
+    "url": "https://www.dropbox.com/scl/fi/wl2p7vwhm2uai7gieidk9/taproad.zip?rlkey=6nawchqg7o7tzzutfvtlfhtpn&dl=0",
     "tag": "Arcade",
     "type": "zip",
     "icon": "thumbnails/tap-road.png"
-  },
-  {
-    "title": "Traffic Rider",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/rsunnist8dtm38gco5a67/traffic-rider.zip?rlkey=hlba0ml40fgu288e9dezejllv&st=n93ceom9",
-    "tag": "Racing",
-    "type": "zip",
-    "entry": "traffic-rider/index.html",
-    "icon": "thumbnails/traffic-rider.png"
   },
   {
     "title": "Crossy Road",
@@ -103,18 +101,9 @@
   },
   {
     "title": "Five Nights at Epstein",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/vpukpmd5tgx18nbkwcbhi/five-nights-at-epstein.zip?rlkey=rrx9xd8lztkq9ionld9d4lfw2",
-    "tag": "Horror",
-    "type": "zip",
-    "entry": "Five-Nights-at-Epstein-main/index.html",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/0flym3r4qx90p4uab8ejg/five-nights-at-epstein.html?rlkey=f12dxc38twtorv79ig2n80tzx&dl=0",
+    "tag": "General",
     "icon": "thumbnails/five-nights-at-epstein.png"
-  },
-  {
-    "title": "Fruit Ninja",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/rgzo1wzsjeok75mrwuuj0/fruitninja.zip?rlkey=2tjprq6lsazhxe83si5yg3rb1",
-    "tag": "Arcade",
-    "type": "zip",
-    "icon": "thumbnails/fruit-ninja.jpg"
   },
   {
     "title": "Stack",
@@ -131,26 +120,17 @@
     "icon": "thumbnails/world-s-hardest-game.png"
   },
   {
-    "title": "Cookie Clicker",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/65lbwr3r3rotc98p2zrj0/cookie-clicker.zip?rlkey=f40pjva3ktea66a4vyu5lsmit",
-    "tag": "Idle",
-    "type": "zip",
-    "icon": "thumbnails/cookie-clicker.jpg",
-    "locked": true
-  },
-  {
     "title": "Slither Snake",
     "url": "https://dl.dropboxusercontent.com/scl/fi/qfk3juhb7vzaa58fecja7/slither-snake.zip?rlkey=wivzspvac3267y0107dyi6wtg",
     "tag": "Snake",
     "type": "zip",
     "icon": "thumbnails/slither-snake.png",
-    "locked": true
+    "wip": true
   },
   {
     "title": "Getting Over It",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/jmfs54t61iobf2p7c8c0o/getting-over-it.zip?rlkey=g74advfvn34z7c8y1i41v6a1l",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/hdi2w2o0loebfqc92b6pc/Getting-Over-It-v1.4.html?rlkey=7dsm51ivk2ui577028zz99h20&dl=0",
     "tag": "Platformer",
-    "type": "zip",
     "icon": "thumbnails/getting-over-it.png"
   }
 ]
