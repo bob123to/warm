@@ -132,5 +132,17 @@
     "url": "https://dl.dropboxusercontent.com/scl/fi/hdi2w2o0loebfqc92b6pc/Getting-Over-It-v1.4.html?rlkey=7dsm51ivk2ui577028zz99h20&dl=0",
     "tag": "Platformer",
     "icon": "thumbnails/getting-over-it.png"
+  },
+  {
+    "title": "Fruit Ninja",
+    "url": "local-games/fruit-ninja/index.html",
+    "tag": "Arcade",
+    "icon": "thumbnails/fruit-ninja.png"
+  },
+  {
+    "title": "Tomb of the Mask",
+    "url": "local-games/tomb-of-the-mask/index.html",
+    "tag": "Arcade",
+    "icon": "thumbnails/tomb-of-the-mask.png"
   }
 ]
