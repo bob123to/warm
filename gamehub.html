@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Hub</title>
+<!-- Fallback to CDN for coi-serviceworker if local is missing -->
+<script src="coi-serviceworker.min.js"></script>
+<script>if (window.location.protocol === 'file:' && !window.location.search.includes('local=true')) { document.write('<script src="local-games.js"><\/script>'); }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg0: #141414; --bg1: #1c1c1c; --bg2: #242424; --bg3: #2e2e2e;
+    --line: #333; --line2: #3d3d3d;
+    --text: #e0e0e0; --text2: #999; --text3: #555;
+    --blue: #4a90d9; --blue-dim: #2a4f7a;
+    --green: #4caf6e; --red: #c0392b; --yellow: #d4a94a;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'SF Mono', 'Consolas', 'Menlo', monospace;
+  }
+  html, body { height: 100%; overflow: hidden; background: var(--bg0); color: var(--text); font-family: var(--font); font-size: 13px; }
+  body { display: flex; flex-direction: column; }
+
+  #topbar { height: 40px; background: var(--bg1); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; gap: 10px; flex-shrink: 0; }
+  .logo { font-size: 13px; font-weight: 600; white-space: nowrap; margin-right: 2px; }
+  #url-input { flex: 1; height: 26px; background: var(--bg0); border: 1px solid var(--line2); border-radius: 3px; color: var(--text); padding: 0 8px; outline: none; font-size: 11px; }
+  .tb-btn { height: 26px; padding: 0 10px; background: var(--bg2); border: 1px solid var(--line2); border-radius: 3px; color: var(--text2); cursor: pointer; font-size: 12px; }
+  .tb-btn.primary { border-color: var(--blue-dim); color: var(--blue); }
+
+  .layout { display: flex; flex: 1; overflow: hidden; }
+  #sidebar { width: 220px; background: var(--bg1); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+  #sidebar-title { height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--line); color: var(--text2); font-size: 11px; text-transform: uppercase; }
+  #game-list { flex: 1; overflow-y: auto; }
+  .game-item { display: flex; align-items: center; gap: 9px; padding: 7px 12px; cursor: pointer; border-left: 2px solid transparent; position: relative; }
+  .game-item:hover { background: var(--bg2); }
+  .game-item.active { background: var(--bg2); border-left-color: var(--blue); }
+  .game-item.locked { opacity: 0.5; cursor: not-allowed; }
+  .gi-icon { width: 28px; height: 28px; background: var(--bg3); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 15px; overflow: hidden; flex-shrink: 0; }
+  .gi-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .gi-meta { min-width: 0; }
+  .gi-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { position: absolute; top: 4px; right: 8px; font-size: 8px; font-weight: 800; padding: 0 3px; border-radius: 2px; text-transform: uppercase; }
+  .badge-wip { background: var(--yellow); color: #000; }
+  .badge-locked { background: var(--red); color: #fff; }
+  .gi-variant { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .gi-expand { font-size: 10px; color: var(--text3); margin-left: auto; padding: 0 4px; }
+  .gi-variant-list { display: none; }
+  .gi-variant-list.open { display: block; }
+  .gi-variant-item { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 44px; cursor: pointer; border-left: 2px solid transparent; }
+  .gi-variant-item:hover { background: var(--bg2); }
+  .gi-variant-item.active { background: var(--bg2); border-left-color: var(--blue); }
+  .gi-variant-name { font-size: 12px; }
+  .gi-variant-branch { font-size: 11px; color: var(--text3); font-family: var(--mono); width: 16px; flex-shrink: 0; }
+
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  #game-bar { height: 36px; background: var(--bg1); border-bottom: 1px solid var(--line); display: none; align-items: center; padding: 0 10px; gap: 8px; }
+  #frame-wrap { flex: 1; background: #000; position: relative; display: none; }
+  #game-frame { width: 100%; height: 100%; border: none; }
+
+  #overlay { position: absolute; inset: 0; background: var(--bg0); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; z-index: 10; padding: 40px; text-align: center; }
+  #overlay.hidden { display: none; }
+  #progress-wrap { width: 100%; max-width: 200px; height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 10px; display: none; overflow: hidden; }
+  #progress-bar { width: 0%; height: 100%; background: var(--blue); transition: width 0.1s; }
+
+  #statusbar { height: 22px; background: var(--bg1); border-top: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; gap: 8px; font-size: 11px; }
+  #status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
+  #status-dot.ok { background: var(--green); }
+  #status-dot.err { background: var(--red); }
+
+  /* Password modal */
+  #pwd-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 2000; }
+  #pwd-overlay.active { display: flex; }
+  #pwd-box { background: var(--bg1); border: 1px solid var(--line); padding: 28px; border-radius: 8px; width: 320px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  #pwd-box h2 { font-size: 16px; font-weight: 600; }
+  #pwd-box p { font-size: 12px; color: var(--text2); }
+  #pwd-input { height: 34px; background: var(--bg0); border: 1px solid var(--line2); border-radius: 4px; color: var(--text); padding: 0 10px; outline: none; font-size: 13px; font-family: var(--mono); }
+  #pwd-input:focus { border-color: var(--blue); }
+  #pwd-box .pwd-btns { display: flex; gap: 8px; }
+  #pwd-box .pwd-btns button { flex: 1; height: 34px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: var(--font); }
+  #pwd-unlock { background: var(--blue-dim); border: 1px solid var(--blue); color: var(--blue); }
+  #pwd-unlock:hover { background: var(--blue); color: #fff; }
+  #pwd-skip { background: transparent; border: 1px solid var(--line2); color: var(--text3); }
+  #pwd-skip:hover { border-color: var(--text2); color: var(--text2); }
+  #pwd-error { font-size: 11px; color: var(--red); min-height: 14px; text-align: center; }
+
+  /* Editor panel */
+  #editor-overlay { position: fixed; inset: 0; background: var(--bg0); z-index: 500; display: none; flex-direction: column; }
+  #editor-overlay.active { display: flex; }
+  #editor-topbar { height: 40px; background: var(--bg1); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; gap: 10px; flex-shrink: 0; }
+  #editor-topbar .logo { font-size: 13px; font-weight: 600; }
+  #editor-topbar .logo span { color: var(--text3); font-weight: 400; }
+  #editor-topbar .sep { width: 1px; height: 18px; background: var(--line2); }
+  .ed-btn { height: 26px; padding: 0 10px; background: var(--bg2); border: 1px solid var(--line2); border-radius: 3px; color: var(--text2); font-size: 12px; font-family: var(--font); cursor: pointer; transition: border-color 0.1s, color 0.1s; }
+  .ed-btn:hover { border-color: var(--blue); color: var(--text); }
+  .ed-btn.green { border-color: #2a5c3a; color: var(--green); }
+  .ed-btn.blue { border-color: var(--blue-dim); color: var(--blue); }
+  .ed-btn.close { margin-left: auto; }
+  #editor-body { flex: 1; display: flex; overflow: hidden; }
+  #editor-list-pane { width: 280px; background: var(--bg1); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  #editor-list-header { height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-bottom: 1px solid var(--line); color: var(--text2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  #editor-list-header .add-btn { height: 20px; padding: 0 8px; background: transparent; border: 1px solid var(--line2); border-radius: 3px; color: var(--text3); cursor: pointer; }
+  #editor-list-header .add-btn:hover { border-color: var(--green); color: var(--green); }
+  #editor-list { flex: 1; overflow-y: auto; }
+  #editor-list::-webkit-scrollbar { width: 4px; }
+  #editor-list::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+  .ed-game-row { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 4px; height: 44px; border-bottom: 1px solid var(--line); cursor: pointer; border-left: 2px solid transparent; transition: background 0.1s; user-select: none; position: relative; }
+  .ed-game-row:hover { background: var(--bg2); }
+  .ed-game-row.active { background: var(--bg2); border-left-color: var(--blue); }
+  .ed-drag { color: var(--text3); font-size: 12px; cursor: grab; padding: 4px 2px; flex-shrink: 0; }
+  .ed-row-icon { width: 28px; height: 28px; background: var(--bg3); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; overflow: hidden; }
+  .ed-row-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .ed-row-meta { flex: 1; min-width: 0; }
+  .ed-row-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ed-row-tag { font-size: 11px; color: var(--text3); white-space: nowrap; }
+  .ed-row-group { font-size: 11px; color: var(--blue); white-space: nowrap; }
+  .ed-row-del { width: 22px; height: 22px; background: transparent; border: none; color: var(--text3); cursor: pointer; opacity: 0; flex-shrink: 0; }
+  .ed-game-row:hover .ed-row-del { opacity: 1; }
+  .ed-row-del:hover { color: var(--red); }
+  #editor-form-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #editor-form-scroll { flex: 1; overflow-y: auto; padding: 20px; }
+  #editor-no-sel { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 13px; }
+  .ed-form { display: flex; flex-direction: column; gap: 14px; max-width: 560px; }
+  .ed-field { display: flex; flex-direction: column; gap: 6px; }
+  .ed-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 2px; }
+  .ed-input { height: 30px; padding: 0 9px; background: var(--bg2); border: 1px solid var(--line2); border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; }
+  .ed-input:focus { border-color: var(--blue); }
+  .ed-url-row { display: flex; gap: 6px; }
+  .ed-url-row .ed-input { flex: 1; }
+  .ed-fix-btn { height: 30px; padding: 0 10px; background: var(--bg3); border: 1px solid var(--line2); border-radius: 3px; color: var(--text2); font-size: 11px; cursor: pointer; }
+  .ed-icon-row { display: flex; gap: 8px; align-items: center; }
+  .ed-icon-preview { width: 30px; height: 30px; background: var(--bg3); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; overflow: hidden; }
+  .ed-icon-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .ed-divider { border: none; border-top: 1px solid var(--line); margin: 4px 0; }
+  #editor-preview-pane { height: 160px; border-top: 1px solid var(--line); display: flex; flex-direction: column; flex-shrink: 0; }
+  #editor-preview-header { height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--line); color: var(--text2); font-size: 11px; text-transform: uppercase; }
+  #editor-preview-content { flex: 1; overflow: auto; padding: 8px 14px; font-family: var(--mono); font-size: 11px; color: var(--text2); background: var(--bg0); white-space: pre; }
+  .ed-jk { color: var(--blue); } .ed-jv { color: #9ecbff; } .ed-jb { color: var(--yellow); }
+
+  /* Upload dropdown */
+  .upload-dd-wrap { position: relative; display: inline-block; }
+  .upload-dd-menu { display: none; position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--bg1); border: 1px solid var(--line); border-radius: 6px; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 100; overflow: hidden; }
+  .upload-dd-menu.active { display: block; }
+  .upload-dd-menu div { padding: 8px 14px; font-size: 12px; color: var(--text); cursor: pointer; }
+  .upload-dd-menu div:hover { background: var(--bg2); color: var(--blue); }
+
+  /* Dropbox URL picker overlay */
+  #dbp-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1600; }
+  #dbp-overlay.active { display: flex; }
+  #dbp-box { background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; width: 90%; max-width: 520px; height: 60vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  #dbp-topbar { height: 38px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); gap: 8px; }
+  #dbp-topbar .dbp-title { font-size: 12px; font-weight: 600; }
+  #dbp-path { height: 26px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--text2); font-family: var(--mono); gap: 4px; }
+  #dbp-path .dbp-path-btn { color: var(--blue); cursor: pointer; }
+  #dbp-path .dbp-path-btn:hover { text-decoration: underline; }
+  #dbp-content { flex: 1; overflow-y: auto; padding: 4px 0; }
+  #dbp-footer { height: 28px; display: flex; align-items: center; padding: 0 12px; border-top: 1px solid var(--line); font-size: 10px; color: var(--text3); gap: 8px; }
+  .dbp-entry { display: flex; align-items: center; gap: 8px; padding: 5px 12px; cursor: default; font-size: 11px; }
+  .dbp-entry:hover { background: var(--bg2); }
+  .dbp-entry .dbp-icon { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
+  .dbp-entry .dbp-name { flex: 1; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dbp-entry .dbp-pick { height: 22px; padding: 0 8px; background: var(--blue-dim); border: none; border-radius: 3px; color: var(--blue); font-size: 10px; cursor: pointer; display: none; }
+  .dbp-entry .dbp-pick.show { display: inline-block; }
+  .dbp-entry:hover .dbp-pick.show { display: inline-block; }
+
+  /* File browser */
+  #fb-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1500; }
+  #fb-overlay.active { display: flex; }
+  #fb-box { background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; width: 90%; max-width: 680px; height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  #fb-topbar { height: 40px; display: flex; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--line); gap: 10px; }
+  #fb-topbar .fb-title { font-size: 13px; font-weight: 600; }
+  #fb-topbar .fb-tabs { display: flex; gap: 2px; margin-left: 16px; }
+  #fb-topbar .fb-tab { height: 26px; padding: 0 12px; background: transparent; border: 1px solid var(--line2); border-radius: 3px; color: var(--text3); font-size: 11px; cursor: pointer; }
+  #fb-topbar .fb-tab.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  #fb-close-btn { margin-left: auto; height: 26px; padding: 0 10px; background: transparent; border: 1px solid var(--line2); border-radius: 3px; color: var(--text3); cursor: pointer; }
+  #fb-path { height: 28px; display: flex; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--text2); font-family: var(--mono); gap: 6px; }
+  #fb-path .fb-path-btn { color: var(--blue); cursor: pointer; }
+  #fb-path .fb-path-btn:hover { text-decoration: underline; }
+  #fb-content { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .fb-entry { display: flex; align-items: center; gap: 8px; padding: 6px 14px; cursor: default; font-size: 12px; }
+  .fb-entry:hover { background: var(--bg2); }
+  .fb-entry .fb-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+  .fb-entry .fb-name { flex: 1; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fb-entry .fb-size { font-size: 10px; color: var(--text3); margin-right: 8px; white-space: nowrap; }
+  .fb-entry .fb-del { opacity: 0; width: 22px; height: 22px; background: transparent; border: none; color: var(--red); cursor: pointer; }
+  .fb-entry:hover .fb-del { opacity: 1; }
+  #fb-status { height: 28px; display: flex; align-items: center; padding: 0 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--text3); }
+</style>
+</head>
+<body>
+
+<div id="topbar" style="display: none;">
+  <span class="logo">Game Hub</span>
+  <input type="text" id="url-input" placeholder="games.json URL..." />
+  <button class="tb-btn primary" onclick="loadURL()">Load</button>
+  <button class="tb-btn" onclick="clearCache()">Clear Cache</button>
+</div>
+
+<div class="layout">
+  <div id="sidebar">
+    <div id="sidebar-title">Library <span id="game-count"></span>
+      <div id="sync-status" style="display:none; font-size:10px; color:var(--text3);"></div>
+    </div>
+    <div style="padding: 6px 10px; border-bottom: 1px solid var(--line);">
+      <input type="text" id="search-input" placeholder="Search games..." style="width: 100%; height: 26px; background: var(--bg0); border: 1px solid var(--line2); border-radius: 3px; color: var(--text); padding: 0 8px; outline: none; font-size: 11px;" oninput="filterGames()" />
+      <button id="sync-btn" onclick="syncDropbox()" style="display:none; width:100%; margin-top:6px; height:26px; padding:0 8px; background:var(--blue-dim); border:1px solid var(--blue); border-radius:3px; color:var(--blue); cursor:pointer; font-size:11px;">&#x21bb; Sync from Dropbox</button>
+      <button id="editor-btn" onclick="toggleEditor()" style="display:none; width:100%; margin-top:4px; height:26px; padding:0 8px; background:var(--green-dim); border:1px solid var(--green); border-radius:3px; color:var(--green); cursor:pointer; font-size:11px;">&#x270E; Edit Games</button>
+    </div>
+    <div id="game-list"></div>
+  </div>
+  <div id="main">
+    <div id="game-bar">
+      <span id="gb-title" style="flex:1; font-weight:500;"></span>
+      <button class="tb-btn" onclick="toggleFullscreen()">Fullscreen</button>
+      <button class="tb-btn" onclick="reloadGame()">Reload</button>
+    </div>
+    <div id="frame-wrap">
+      <div id="overlay">
+        <div id="ov-icon" style="font-size:30px;">🎮</div>
+        <div id="ov-title" style="font-weight:600;">Select a game</div>
+        <div id="ov-body" style="color:var(--text2); font-size:12px;"></div>
+        <div id="progress-wrap"><div id="progress-bar"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.2.0</div></div>
+
+<!-- Password overlay -->
+<div id="pwd-overlay">
+  <div id="pwd-box">
+    <h2>&#x1f512; Local Mode</h2>
+    <p>Enter the local mode password to access editing and sync features.</p>
+    <input type="password" id="pwd-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()">
+    <div class="pwd-btns">
+      <button id="pwd-unlock" onclick="checkPassword()">Unlock</button>
+      <button id="pwd-skip" onclick="skipPassword()">Skip (use normal mode)</button>
+    </div>
+    <div id="pwd-error"></div>
+  </div>
+</div>
+
+<!-- Editor overlay -->
+<div id="editor-overlay">
+  <div id="editor-topbar">
+    <span class="logo">Game Hub <span>/ Editor</span></span>
+    <span id="editor-source" style="font-size:10px;color:var(--text3);margin-left:4px;">(local)</span>
+    <div class="sep"></div>
+    <button class="ed-btn blue" onclick="exportToDropbox()">&#x2601; Dropbox Export</button>
+    <button class="ed-btn" onclick="downloadJSON()">&#x2193; Download</button>
+    <button class="ed-btn" onclick="copyJSON()">&#x2398; Copy</button>
+    <button class="ed-btn" onclick="document.getElementById('editor-import-input').click()">&#x2191; Import</button>
+    <div class="sep"></div>
+    <button class="ed-btn" onclick="loadEditorFromDropbox()" style="color:var(--yellow);border-color:#5a4a2a;">&#x2601; Load from Dropbox</button>
+    <div class="upload-dd-wrap">
+      <button class="ed-btn" style="color:var(--green);border-color:#2a5c3a;" onclick="toggleUploadDD()">&#x1F4E4; Upload <span class="dd-arrow">&#x25BE;</span></button>
+      <div class="upload-dd-menu" id="upload-dd-menu">
+        <div onclick="document.getElementById('editor-upload-zip').click()">&#x1F4E6; Upload ZIP (Local)</div>
+        <div onclick="document.getElementById('editor-upload-html').click()">&#x1F4D6; Upload HTML (Local)</div>
+        <div onclick="uploadFromURL()">&#x1F517; Upload from URL</div>
+        <div onclick="document.getElementById('editor-upload-zip-dropbox').click()" style="border-top:1px solid var(--line);">&#x2601; Upload ZIP (Dropbox)</div>
+        <div onclick="document.getElementById('editor-upload-html-dropbox').click()">&#x2601; Upload HTML (Dropbox)</div>
+      </div>
+    </div>
+    <span id="editor-upload-status" style="font-size:10px;color:var(--text3);"></span>
+    <button class="ed-btn" onclick="toggleFB()" title="Browse files on the local server">&#x1F4C1; Browse Files</button>
+    <button class="ed-btn close" onclick="toggleEditor()">&#x2715; Close Editor</button>
+    <input type="file" id="editor-import-input" accept=".json" style="display:none" onchange="handleEditorImport(event)">
+    <input type="file" id="editor-upload-zip" accept=".zip" style="display:none" onchange="handleGameUpload(event)">
+    <input type="file" id="editor-upload-html" accept=".html,.htm" style="display:none" onchange="handleHtmlUpload(event)">
+    <input type="file" id="editor-upload-zip-dropbox" accept=".zip" style="display:none" onchange="handleGameUploadDropbox(event)">
+    <input type="file" id="editor-upload-html-dropbox" accept=".html,.htm" style="display:none" onchange="handleHtmlUploadDropbox(event)">
+  </div>
+  <div id="editor-body">
+    <div id="editor-list-pane">
+      <div id="editor-list-header">Games <button class="add-btn" onclick="editorAddGame()">+ Add</button></div>
+      <div id="editor-list"></div>
+    </div>
+    <div id="editor-form-pane">
+      <div id="editor-form-scroll">
+        <div id="editor-no-sel">Select a game to edit</div>
+        <div class="ed-form" id="ed-form" style="display:none">
+          <div class="ed-field"><label class="ed-label">Title *</label><input class="ed-input" id="ef-title" oninput="editorFieldChange()"></div>
+          <div class="ed-field">
+            <label class="ed-label">Game URL *</label>
+            <div class="ed-url-row"><input class="ed-input" id="ef-url" oninput="editorURLChange()"><button class="ed-fix-btn" onclick="editorFixURL()">Fix</button><button class="ed-fix-btn" onclick="dropboxURLPicker()" title="Select from Dropbox" style="color:var(--blue);">&#x2601;</button></div>
+          </div>
+          <div class="ed-field" style="flex-direction:row; gap:12px;">
+            <div style="flex:1;"><label class="ed-label">Tag</label><input class="ed-input" id="ef-tag" oninput="editorFieldChange()"></div>
+            <div style="flex:1;"><label class="ed-label">Type</label><input class="ed-input" id="ef-type" oninput="editorFieldChange()" placeholder="html/zip"></div>
+          </div>
+          <div class="ed-field"><label class="ed-label">Entry (for ZIP)</label><input class="ed-input" id="ef-entry" oninput="editorFieldChange()" placeholder="index.html"></div>
+          <hr class="ed-divider">
+          <div class="ed-field" style="flex-direction:row; gap:12px;">
+            <div style="flex:1;"><label class="ed-label">Group (for versions)</label><input class="ed-input" id="ef-group" oninput="editorFieldChange()" onchange="editorFieldChange()" placeholder="e.g. subway-surfers" list="ed-group-list"><datalist id="ed-group-list"></datalist></div>
+            <div style="flex:1;"><label class="ed-label">Variant (version name)</label><input class="ed-input" id="ef-variant" oninput="editorFieldChange()" placeholder="e.g. Beijing"></div>
+          </div>
+          <hr class="ed-divider">
+          <div class="ed-field">
+            <label class="ed-label">Icon / Thumbnail</label>
+            <div class="ed-icon-row">
+              <div class="ed-icon-preview" id="ef-icon-preview">&#x1f3ae;</div>
+              <input class="ed-input" id="ef-icon" placeholder="&#x1f3ae; or https://..." oninput="editorIconChange()" style="flex:1;">
+              <button class="ed-fix-btn" onclick="editorFixIcon()">Fix</button>
+              <button class="ed-fix-btn" onclick="document.getElementById('editor-thumb-input').click()" style="color:var(--green);">Upload</button>
+              <button class="ed-fix-btn" onclick="editorSaveThumbnailDropbox()" style="color:var(--blue);">&#x2601; To Dropbox</button>
+              <button class="ed-fix-btn" onclick="dropboxIconPicker()" title="Select from Dropbox" style="color:var(--blue);">&#x2601; Pick</button>
+            </div>
+            <div id="ef-thumb-preview" style="display:none; margin-top:6px;">
+              <div style="display:flex; gap:10px; align-items:center;">
+                <canvas id="ef-thumb-canvas" style="background:var(--bg3); border-radius:4px; width:128px; height:128px;"></canvas>
+                <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+                  <label class="ed-label" style="padding:0;">Resize</label>
+                  <input type="range" id="ef-thumb-size" min="32" max="256" value="128" oninput="editorThumbUpdatePreview()" style="width:100%;">
+                  <div style="display:flex; gap:6px;">
+                    <span id="ef-thumb-size-label" style="font-size:11px;color:var(--text3);">128x128</span>
+                    <button class="ed-fix-btn" id="ef-thumb-save" onclick="editorSaveThumbnail()" style="margin-left:auto;">Save</button>
+                    <button class="ed-fix-btn" onclick="editorCancelThumbnail()">Cancel</button>
+                  </div>
+                  <div id="ef-thumb-status" style="font-size:10px;color:var(--text3);"></div>
+                </div>
+              </div>
+            </div>
+            <input type="file" id="editor-thumb-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none" onchange="handleThumbUpload(event)">
+          </div>
+          <div class="ed-field"><label class="ed-label">Description</label><input class="ed-input" id="ef-desc" oninput="editorFieldChange()"></div>
+          <div style="display:flex; gap:20px;">
+            <label style="cursor:pointer; color:var(--yellow); font-size:11px;"><input type="checkbox" id="ef-wip" onchange="editorFieldChange()"> WIP</label>
+            <label style="cursor:pointer; color:var(--red); font-size:11px;"><input type="checkbox" id="ef-locked" onchange="editorFieldChange()"> LOCKED</label>
+          </div>
+        </div>
+      </div>
+      <div id="editor-preview-pane">
+        <div id="editor-preview-header">JSON preview</div>
+        <div id="editor-preview-content"></div>
+      </div>
+    </div>
+
+    <!-- Dropbox URL Picker -->
+    <div id="dbp-overlay">
+      <div id="dbp-box">
+        <div id="dbp-topbar">
+          <span class="dbp-title">&#x2601; Select Dropbox File</span>
+          <button id="dbp-close-btn" onclick="toggleDBP()" style="margin-left:auto;height:22px;padding:0 8px;background:transparent;border:1px solid var(--line2);border-radius:3px;color:var(--text3);cursor:pointer;">&#x2715; Cancel</button>
+        </div>
+        <div id="dbp-path"></div>
+        <div id="dbp-content"><div style="padding:20px;color:var(--text3);">Loading...</div></div>
+        <div id="dbp-footer"></div>
+      </div>
+    </div>
+
+    <!-- File Browser -->
+    <div id="fb-overlay">
+      <div id="fb-box">
+        <div id="fb-topbar">
+          <span class="fb-title">&#x1F4C1; File Browser</span>
+          <div class="fb-tabs">
+            <button class="fb-tab active" data-tab="local" onclick="switchFBTab('local')">Local</button>
+            <button class="fb-tab" data-tab="dropbox" onclick="switchFBTab('dropbox')">Dropbox</button>
+          </div>
+          <button id="fb-close-btn" onclick="toggleFB()">&#x2715; Close</button>
+        </div>
+        <div id="fb-path"></div>
+        <div id="fb-content"></div>
+        <div id="fb-status"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const IS_LOCAL = window.location.search.includes('local=true');
+const IS_DEBUG = window.location.search.includes('debug=true');
+const PASSWORD = 'Kronos';
+let authenticated = false;
+try { authenticated = sessionStorage.getItem('ghub_auth') === '1'; } catch(e) {}
+if (IS_LOCAL) {
+  if (!authenticated) {
+    document.getElementById('pwd-overlay').classList.add('active');
+    document.getElementById('pwd-input').focus();
+  } else {
+    document.getElementById('sync-btn').style.display = '';
+    document.getElementById('editor-btn').style.display = '';
+  }
+}
+const DEFAULT_URL = 'games.json';
+let games = [], currentIdx = -1, resources = [];
+let editorGames = [], editorSel = -1, editorActive = false, editorFromDropbox = false;
+
+function normalizeDropbox(u) {
+  if(!u || typeof u !== 'string') return u;
+  try {
+    const url = new URL(u);
+    if (url.hostname === 'www.dropbox.com') {
+      url.hostname = 'dl.dropboxusercontent.com';
+      url.searchParams.delete('dl');
+      return url.toString();
+    }
+  } catch(e) {}
+  return u;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function loadURL() {
+  const urlInput = document.getElementById('url-input').value.trim();
+  if (!urlInput) return;
+  const url = normalizeDropbox(urlInput);
+  try {
+    setStatus('loading', 'Fetching...');
+    const r = await fetch(url);
+    games = await r.json();
+    renderSidebar();
+    document.getElementById('game-bar').style.display = 'flex';
+    document.getElementById('frame-wrap').style.display = 'block';
+    setStatus('ok', 'Loaded ' + games.length + ' games');
+  } catch(e) { setStatus('err', 'Load failed'); }
+}
+
+const expandedGroups = new Set();
+
+function renderSidebar(filteredGames) {
+  const list = document.getElementById('game-list'); list.innerHTML = '';
+  const displayGames = filteredGames || games;
+  document.getElementById('game-count').textContent = displayGames.length;
+
+  // Group by 'group' field
+  const groups = {};
+  displayGames.forEach(g => {
+    const key = g.group || '';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(g);
+  });
+
+  Object.entries(groups).forEach(([groupKey, groupGames]) => {
+    if (!groupKey || groupGames.length === 1) {
+      // Ungrouped or single game — render normally
+      groupGames.forEach(g => {
+        const originalIdx = games.indexOf(g);
+        renderGameItem(list, g, originalIdx);
+      });
+    } else {
+      // Grouped game — render as expandable
+      renderGroupItem(list, groupKey, groupGames);
+    }
+  });
+}
+
+function renderGameItem(list, g, idx) {
+  const el = document.createElement('div');
+  el.className = 'game-item' + (g.locked && !IS_LOCAL ? ' locked' : '') + (g.wip ? ' wip' : '');
+  if (currentIdx === idx) el.classList.add('active');
+
+  let iconHTML;
+  const iconUrl = normalizeDropbox(g.icon);
+  if (g.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) {
+    iconHTML = `<img src="${esc(iconUrl)}" onerror="this.parentNode.textContent='🎮'">`;
+  } else {
+    iconHTML = esc(g.icon || '🎮');
+  }
+
+  const badge = g.locked ? '<div class="badge badge-locked">Locked</div>' : (g.wip ? '<div class="badge badge-wip">WIP</div>' : '');
+  el.innerHTML = badge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(g.title||'Untitled')+'</div></div>';
+  el.onclick = () => { if (!g.locked || IS_LOCAL) selectGame(idx); };
+  list.appendChild(el);
+}
+
+function renderGroupItem(list, groupKey, groupGames) {
+  const first = groupGames[0];
+  const isOpen = expandedGroups.has(groupKey);
+
+  // Derive a display-friendly group name from the groupKey
+  const groupTitle = first.group_title || groupKey.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  // Main group header
+  const header = document.createElement('div');
+  header.className = 'game-item';
+  if (isOpen) header.classList.add('active');
+
+  let iconHTML;
+  const iconUrl = normalizeDropbox(first.icon);
+  if (first.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) {
+    iconHTML = `<img src="${esc(iconUrl)}" onerror="this.parentNode.textContent='🎮'">`;
+  } else {
+    iconHTML = esc(first.icon || '🎮');
+  }
+
+  header.innerHTML = '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(groupTitle)+'</div></div><div class="gi-expand">'+(isOpen ? '▲' : '▼')+'</div>';
+  header.onclick = () => {
+    if (expandedGroups.has(groupKey)) expandedGroups.delete(groupKey);
+    else expandedGroups.add(groupKey);
+    renderSidebar();
+  };
+  list.appendChild(header);
+
+  // Variant list
+  const vlist = document.createElement('div');
+  vlist.className = 'gi-variant-list' + (isOpen ? ' open' : '');
+  groupGames.forEach((g, gi) => {
+    const originalIdx = games.indexOf(g);
+    const vi = document.createElement('div');
+    vi.className = 'gi-variant-item' + (g.locked && !IS_LOCAL ? ' locked' : '');
+    if (currentIdx === originalIdx) vi.classList.add('active');
+    const branch = gi === groupGames.length - 1 ? '└─' : '├─';
+    vi.innerHTML = '<span class="gi-variant-branch">' + branch + '</span><span class="gi-variant-name">' + esc(g.variant || g.title) + '</span>';
+    vi.onclick = (e) => { e.stopPropagation(); if (!g.locked || IS_LOCAL) selectGame(originalIdx); };
+    vlist.appendChild(vi);
+  });
+  list.appendChild(vlist);
+}
+
+function filterGames() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  const filtered = games.filter(g => (g.title || '').toLowerCase().includes(query));
+  renderSidebar(filtered);
+}
+
+function selectGame(i) {
+  currentIdx = i;
+  renderSidebar();
+  launchGame(games[i]);
+}
+
+async function syncDropbox() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true; btn.textContent = 'Starting...';
+  const status = document.getElementById('sync-status');
+  status.style.display = '';
+  status.textContent = 'Starting sync...';
+  try {
+    await fetch(LOCAL_HOST + '/sync-dropbox');
+    status.textContent = 'Downloading games...';
+    btn.textContent = 'Downloading...';
+    // Poll for completion
+    while (true) {
+      await new Promise(r => setTimeout(r, 2000));
+      const sr = await fetch(LOCAL_HOST + '/sync-status');
+      const result = await sr.json();
+      if (result.in_progress) {
+        status.textContent = 'Downloading: ' + (result.downloaded ? result.downloaded.length + ' done' : '0') + (result.errors ? ', ' + result.errors.length + ' errors' : '');
+      } else {
+        const downloaded = (result.downloaded || []).length;
+        const skipped = (result.skipped || []).length;
+        const errors = (result.errors || []).length;
+        status.textContent = downloaded + ' downloaded, ' + skipped + ' skipped' + (errors ? ', ' + errors + ' errors' : '');
+        loadURL();
+        break;
+      }
+    }
+  } catch(e) {
+    status.textContent = 'Sync failed: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '\u21bb Sync from Dropbox';
+}
+
+async function launchGame(g) {
+  const wrap = document.getElementById('frame-wrap');
+  let frame = document.getElementById('game-frame');
+  if (frame) { frame.srcdoc = ''; frame.remove(); }
+  resources.forEach(u => URL.revokeObjectURL(u));
+  resources = [];
+
+  document.getElementById('gb-title').textContent = g.title + (g.wip ? ' [WIP]' : '');
+  showOverlay('loading', g);
+  setStatus('loading', 'Preparing ' + g.title);
+
+  try {
+    // For relative or local URLs, embed via iframe src directly
+    // so relative asset paths resolve against the actual files/server.
+    if (g.url && (
+      g.url.startsWith('file://') ||
+      g.url.startsWith('http://localhost:') ||
+      g.url.startsWith('http://127.0.0.1:') ||
+      (window.location.protocol === 'file:' && !g.url.includes('://')) ||
+      !g.url.includes('://')
+    )) {
+      frame = document.createElement('iframe');
+      frame.id = 'game-frame';
+      frame.src = g.url;
+      frame.sandbox = "allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals allow-popups allow-downloads";
+      frame.allow = "fullscreen; autoplay; clipboard-write";
+      wrap.appendChild(frame);
+      frame.onload = () => { hideOverlay(); setStatus('ok', 'Playing: ' + g.title); frame.contentWindow.focus(); };
+      return;
+    }
+
+    const r = await fetch(normalizeDropbox(g.url));
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    let data = await r.arrayBuffer();
+    
+    frame = document.createElement('iframe');
+    frame.id = 'game-frame';
+    frame.sandbox = "allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals allow-popups allow-downloads";
+    frame.allow = "fullscreen; autoplay; clipboard-write";
+    wrap.appendChild(frame);
+
+    if (g.url.toLowerCase().endsWith('.zip') || g.type === 'zip') {
+      const zip = await JSZip.loadAsync(data);
+      data = null; 
+      const fm = {};
+      const files = Object.entries(zip.files).filter(f => !f[1].dir);
+      const total = files.length;
+      
+      updateProgress(0);
+      document.getElementById('progress-wrap').style.display = 'block';
+
+      for (let i = 0; i < total; i++) {
+        const [path, file] = files[i];
+        const b = new Blob([await file.async('uint8array')], { type: getMime(path) });
+        fm[path] = URL.createObjectURL(b); 
+        resources.push(fm[path]);
+        
+        if (i % 10 === 0) { // Update progress and yield every 10 files
+            updateProgress((i / total) * 100);
+            await new Promise(res => setTimeout(res, 0));
+        }
+      }
+      updateProgress(100);
+
+      let entry = g.entry || 'index.html';
+      if (!fm[entry]) entry = Object.keys(fm).find(k => k.toLowerCase().endsWith('index.html')) || Object.keys(fm)[0];
+      
+      if (!zip.files[entry]) throw new Error("Entry file not found: " + entry);
+      let html = await zip.files[entry].async('text');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      const entryBase = entry.substring(0, entry.lastIndexOf('/') + 1);
+
+      const resolve = (u) => {
+        if (!u || typeof u !== 'string' || u.includes('://') || u.startsWith('blob:') || u.startsWith('data:') || u.startsWith('#')) return null;
+        let c = u.replace(/^\.\//, '').split('?')[0];
+        if (fm[c]) return fm[c];
+        const fn = c.split('/').pop();
+        if (!fn) return null;
+        const f = Object.keys(fm).find(k => k === c || k === fn || k.endsWith('/' + fn));
+        if (f) return fm[f];
+        // Try with entryBase prefix (e.g. ZIP entries nested under a subdirectory)
+        if (entryBase) {
+          const withBase = entryBase + c;
+          if (fm[withBase]) return fm[withBase];
+          if (fm[entryBase + fn]) return fm[entryBase + fn];
+        }
+        return null;
+      };
+
+      doc.querySelectorAll('[src], [href]').forEach(el => {
+        const attr = el.hasAttribute('src') ? 'src' : 'href';
+        const res = resolve(el.getAttribute(attr));
+        if (res) el.setAttribute(attr, res);
+      });
+
+      // Rewrite CSS url() references in inline styles
+      doc.querySelectorAll('style').forEach(el => {
+        el.textContent = el.textContent.replace(/url\(\s*(['"]?)([^'")\s]+)\1\s*\)/g, (m, q, url) => {
+          if (url.startsWith('data:') || url.startsWith('blob:') || url.includes('://')) return m;
+          const resolved = resolve(entryBase + url.replace(/^\.\//, ''));
+          return resolved ? 'url("' + resolved + '")' : m;
+        });
+      });
+
+      // Rewrite CSS url() references in linked stylesheets
+      const cssLinks = [...doc.querySelectorAll('link[rel="stylesheet"]')];
+      for (const el of cssLinks) {
+        const href = el.getAttribute('href');
+        if (!href || href.startsWith('blob:') || href.startsWith('data:') || href.includes('://')) continue;
+        const zf = zip.files[href];
+        if (!zf) continue;
+        try {
+          let css = await zf.async('text');
+          const base = href.substring(0, href.lastIndexOf('/') + 1);
+          css = css.replace(/url\(\s*(['"]?)([^'")\s]+)\1\s*\)/g, (m, q, url) => {
+            if (url.startsWith('data:') || url.startsWith('blob:') || url.includes('://')) return m;
+            const resolved = resolve(base + url.replace(/^\.\//, ''));
+            return resolved ? 'url("' + resolved + '")' : m;
+          });
+          const newBlob = new Blob([css], { type: 'text/css' });
+          const newUrl = URL.createObjectURL(newBlob);
+          resources.push(newUrl);
+          el.setAttribute('href', newUrl);
+        } catch(e) {
+          console.warn('Failed to rewrite CSS:', href, e);
+        }
+      }
+
+      doc.head.insertAdjacentHTML('afterbegin', getShim(fm, IS_DEBUG, entryBase));
+      frame.srcdoc = doc.documentElement.outerHTML;
+    } else {
+      frame.srcdoc = new TextDecoder('utf-8').decode(data);
+    }
+    frame.onload = () => { 
+        hideOverlay(); 
+        setStatus('ok', 'Playing: ' + g.title); 
+        frame.contentWindow.focus(); 
+        document.getElementById('progress-wrap').style.display = 'none';
+    };
+    // Ensure iframe focus after loading
+    setTimeout(() => { if (frame.contentWindow) frame.contentWindow.focus(); }, 500);
+  } catch(e) { 
+    console.error(e);
+    setStatus('err', 'Failed to load: ' + e.message); 
+    document.getElementById('ov-title').textContent = "Error";
+    document.getElementById('ov-body').textContent = e.message;
+    document.getElementById('progress-wrap').style.display = 'none';
+  }
+}
+
+function updateProgress(p) {
+    document.getElementById('progress-bar').style.width = p + '%';
+}
+
+function getMime(path) {
+  const types = {
+    'js': 'application/javascript', 'wasm': 'application/wasm', 'html': 'text/html', 'css': 'text/css',
+    'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'json': 'application/json',
+    'txt': 'text/plain', 'svg': 'image/svg+xml', 'xml': 'application/xml',
+    'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'ogg': 'audio/ogg', 'webm': 'video/webm', 'mp4': 'video/mp4',
+    'data': 'application/octet-stream'
+  };
+  let p = path.toLowerCase();
+  if (p.endsWith('.unityweb')) p = p.slice(0, -9);
+  const ext = p.split('.').pop();
+  return types[ext] || 'application/octet-stream';
+}
+
+function getShim(fm, dbg, entryBase) {
+  const fmB64 = btoa(unescape(encodeURIComponent(JSON.stringify(fm))));
+  return `<script>(function(){
+    var fm=JSON.parse(decodeURIComponent(escape(atob("${fmB64}"))));
+    var origin="http://game.local/";
+    var debug=${!!dbg};
+    function log(){ if(debug) try{ console.log.apply(console, ["[Shim]"].concat([].slice.call(arguments))); }catch(e){} }
+    console.log("[Shim] init start debug=" + debug + " origin=" + window.origin + " parentOrigin=" + (window.parent ? window.parent.origin : 'none'));
+    var entryBase="${entryBase || ''}";
+    function resolve(s){
+      if(!s || typeof s!=="string" || s.startsWith("blob:") || s.startsWith("data:") || s.includes("://")) return s;
+      var r=s.replace(/^\\.\\//,"").replace(/^\\//, "").split("?")[0];
+      if(!r || r === ".") return origin + "index.html";
+      if(fm[r]){ log("resolve hit exact:", s); return fm[r]; }
+      var fn=r.split("/").pop();
+      if(!fn) return origin + r;
+      var k=Object.keys(fm).find(function(x){ return x===r || x===fn || x.endsWith("/"+fn); });
+      if(k){ log("resolve hit fuzzy:", s, "->", k); return fm[k]; }
+      // Try with entryBase prefix if set (e.g. ZIP entries nested under a subdirectory)
+      if(entryBase){
+        var withBase = entryBase + r;
+        if(fm[withBase]){ log("resolve hit with base:", s, "->", withBase); return fm[withBase]; }
+        // Also try entryBase + filename only
+        if(fm[entryBase + fn]){ log("resolve hit with base+fn:", s, "->", entryBase + fn); return fm[entryBase + fn]; }
+      }
+      console.warn("[Shim] resolve miss:", s, "-> fallback", origin + r);
+      return origin + r;
+    }
+
+    // Intercept Audio/Image constructors (native C++ constructors bypass JS hooks)
+    console.log("[Shim] installing instance hooks...");
+    (function(){
+      // Override Image constructor so new Image() gets instance-level src interception
+      var OImg = window.Image;
+      if(OImg){
+        window.Image = function(w, h){
+          var el = document.createElement('img');
+          if(!isNaN(w)) try{ el.width = w; }catch(e){}
+          if(!isNaN(h)) try{ el.height = h; }catch(e){}
+          return el;
+        };
+        window.Image.prototype = OImg.prototype;
+        console.log("[Shim] Image constructor overridden");
+      }
+      // Override Audio constructor - intercepts new Audio("path") case
+      var OAud = window.Audio;
+      if(OAud){
+        window.Audio = function(src){
+          var el = document.createElement('audio');
+          if(src && typeof src === "string"){
+            var r = resolve(src);
+            if(r && r !== src) try{ el.src = r; }catch(e){ try{ el.setAttribute('src', r); }catch(e2){} }
+          }
+          return el;
+        };
+        window.Audio.prototype = OAud.prototype;
+        console.log("[Shim] Audio constructor overridden");
+      }
+    })();
+
+    // Instance-level src property interception on created elements
+    (function(){
+      console.log("[Shim] wrapping document.createElement");
+      var OCE = document.createElement.bind(document);
+      document.createElement = function(tag, opts) {
+        var el = OCE(tag, opts);
+        var t = tag.toLowerCase();
+        if(t === 'img' || t === 'audio' || t === 'video' || t === 'source' || t === 'link'){
+          console.log("[Shim] createElement", t, "installing hooks");
+          // Override setAttribute for el.setAttribute('src/href',...) - works for all media types
+          var _setAttr = el.setAttribute.bind(el);
+          el.setAttribute = function(attr, val) {
+            if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
+              if (attr === 'src' || attr === 'href') {
+                _setAttr(attr, resolve(val));
+                return;
+              }
+            }
+            _setAttr(attr, val);
+          };
+          // Instance-level src property for IMG (delete+redefine to invoke native setter)
+          // and AUDIO/VIDEO (keep accessor active, set attribute directly)
+          if(t === 'img'){
+            try {
+              Object.defineProperty(el, 'src', {
+                get: function(){ return el.getAttribute ? el.getAttribute('src') : null; },
+                set: function(v){
+                  if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
+                    console.log("[Shim] instance src intercept", 'IMG', "=", v);
+                    v = resolve(v);
+                  }
+                  el.setAttribute('src', v);
+                },
+                configurable: true, enumerable: true
+              });
+              console.log("[Shim] src desc installed on img");
+            } catch(e){
+              console.log("[Shim] src desc install failed on img", e.message);
+            }
+          } else if(t === 'audio' || t === 'video'){
+            try {
+              Object.defineProperty(el, 'src', {
+                get: function(){ return el.getAttribute('src'); },
+                set: function(v){
+                  if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
+                    v = resolve(v);
+                  }
+                  el.setAttribute('src', v);
+                },
+                configurable: true, enumerable: true
+              });
+            } catch(e){}
+          }
+        }
+        return el;
+      };
+    })();
+
+    var OU = window.URL;
+    window.URL = new Proxy(OU, {
+      construct: function(T, args) {
+        try {
+          if (args.length === 0) return new T();
+          var u = args[0];
+          var b = args[1];
+          if (!b || b === 'about:srcdoc' || (typeof b === 'string' && b.startsWith('blob:'))) b = origin;
+          if (typeof u === 'string') {
+            var r = resolve(u);
+            if (r.startsWith('blob:') || r.includes('://')) return new T(r);
+            return new T(r, b);
+          }
+          return new T(...args);
+        } catch(e) {
+          return new T(...args);
+        }
+      },
+      get: function(T, p) { return typeof T[p]==="function" ? T[p].bind(T) : T[p]; }
+    });
+    var OF=window.fetch; window.fetch=function(i,n){ var u=(typeof i==="string"?i:(i&&i.url?i.url:i)); var r=resolve(u); return OF(r!==u?r:i,n); };
+    var OX=XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open=function(m,u){ return OX.apply(this,[m,resolve(u)].concat([].slice.call(arguments,2))); };
+    var OW = window.Worker; window.Worker = class extends OW { constructor(u,o){ super(resolve(u),o); } };
+    
+    if (window.AudioWorklet) {
+        var OAM = AudioWorklet.prototype.addModule;
+        AudioWorklet.prototype.addModule = function(u, o) { return OAM.call(this, resolve(u), o); };
+    }
+
+    // Hook dynamic script creation
+    (function(){
+      var AP = Node.prototype.appendChild;
+      Node.prototype.appendChild = function(c) {
+        if (c && c.tagName === "SCRIPT") {
+          if(c.src){ log("appendChild SCRIPT src=", c.src.substring(0,100), "attr=", (c.getAttribute('src')||'').substring(0,100)); }
+          if (c.src && !c.src.startsWith("blob:")) {
+            var a = c.getAttribute("src");
+            if (a && !a.startsWith("blob:") && !a.startsWith("data:")) {
+              var r = resolve(a);
+              if (r && r !== a) try { c.src = r; } catch(e) {}
+            }
+          }
+        }
+        return AP.call(this, c);
+      };
+    })();
+
+    // Rewrite CSS url() in dynamically added styles
+    (function(){
+      var _rewriteCSS = function(css) {
+        if (!css || typeof css !== 'string') return css;
+        return css.replace(/url\\(\\s*(['"]?)\\s*([^'")\\s]+)\\s*\\1\\s*\\)/g, function(m, q, u) {
+          if (!u || u.startsWith('data:') || u.startsWith('blob:') || u.includes('://')) return m;
+          var r = resolve(u);
+          return r && r !== u ? 'url("' + r + '")' : m;
+        });
+      };
+      var _mo = new MutationObserver(function(muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var nodes = muts[i].addedNodes;
+          if (!nodes) continue;
+          for (var j = 0; j < nodes.length; j++) {
+            var n = nodes[j];
+            if (!n.tagName) continue;
+            if (n.tagName === 'STYLE') {
+              log("CSS rewrite: style element added");
+              n.textContent = _rewriteCSS(n.textContent);
+            } else if (n.tagName === 'LINK' && (n.rel||'').indexOf('stylesheet') >= 0) {
+              log("CSS rewrite: stylesheet link added", n.href);
+              (function(link) {
+                var h = link.getAttribute('href');
+                if (!h || h.startsWith('blob:') || h.startsWith('data:') || h.includes('://')) return;
+                try {
+                  fetch(h).then(function(r){ return r.text(); }).then(function(css) {
+                    var rewritten = _rewriteCSS(css);
+                    var nb = new Blob([rewritten], {type:'text/css'});
+                    link.href = URL.createObjectURL(nb);
+                  }).catch(function(){});
+                } catch(e) {}
+              })(n);
+            }
+          }
+        }
+      });
+      if (document.head) _mo.observe(document.head, {childList:true, subtree:true});
+    })();
+
+    // Mock parent window for sandboxed games
+    (function(){
+      try {
+        Object.defineProperty(window, "parent", { value: window, writable: true, configurable: true });
+        return;
+      } catch(e) {}
+      try {
+        Object.defineProperty(window, "parent", { get: function(){ return window; }, configurable: true });
+        return;
+      } catch(e) {}
+      try { window.parent = window; } catch(e) {}
+    })();
+    window.maeExportApis_ = function(){};
+
+    // Spoof crossOriginIsolated
+    try { Object.defineProperty(window, "crossOriginIsolated", { get: function(){ return true; }, configurable: true }); } catch(e) {}
+    (function() { var _w=0; try { new SharedArrayBuffer(1); _w=1; } catch(e) {} if (!_w) { log("SAB not usable, polyfilling with ArrayBuffer"); window.SharedArrayBuffer = ArrayBuffer; } })();
+
+    // Polyfill Atomics to work with ArrayBuffer-backed views when SAB is unavailable
+    (function() {
+      var _needsPatch = false;
+      try { var _tv = new Int32Array(new SharedArrayBuffer(4)); Atomics.store(_tv, 0, 1); Atomics.load(_tv, 0); } catch(e) { _needsPatch = true; }
+      if (_needsPatch && typeof Atomics !== 'undefined') {
+        log("Patching Atomics for polyfilled SAB");
+        var _oa = {};
+        ['load','store','exchange','compareExchange','add','sub','and','or','xor','wait','notify','waitAsync','isLockFree'].forEach(function(k) { if (typeof Atomics[k] === 'function') _oa[k] = Atomics[k].bind(Atomics); });
+        Atomics.load = function(t,i) { try { return _oa.load(t,i); } catch(e) { return t[i]; } };
+        Atomics.store = function(t,i,v) { try { return _oa.store(t,i,v); } catch(e) { t[i]=v; return v; } };
+        Atomics.exchange = function(t,i,v) { try { return _oa.exchange(t,i,v); } catch(e) { var o=t[i]; t[i]=v; return o; } };
+        Atomics.compareExchange = function(t,i,e,v) { try { return _oa.compareExchange(t,i,e,v); } catch(err) { var o=t[i]; if(o===e) t[i]=v; return o; } };
+        Atomics.add = function(t,i,v) { try { return _oa.add(t,i,v); } catch(e) { var o=t[i]; t[i]=o+v; return o; } };
+        Atomics.sub = function(t,i,v) { try { return _oa.sub(t,i,v); } catch(e) { var o=t[i]; t[i]=o-v; return o; } };
+        Atomics.and = function(t,i,v) { try { return _oa.and(t,i,v); } catch(e) { var o=t[i]; t[i]=o&v; return o; } };
+        Atomics.or = function(t,i,v) { try { return _oa.or(t,i,v); } catch(e) { var o=t[i]; t[i]=o|v; return o; } };
+        Atomics.xor = function(t,i,v) { try { return _oa.xor(t,i,v); } catch(e) { var o=t[i]; t[i]=o^v; return o; } };
+        Atomics.isLockFree = function(s) { try { return _oa.isLockFree(s); } catch(e) { return s <= 4; } };
+        Atomics.wait = function(t,i,v,to) { try { return _oa.wait(t,i,v,to); } catch(e) { return 'not-equal'; } };
+        Atomics.notify = function(t,i,c) { try { return _oa.notify(t,i,c); } catch(e) { return 0; } };
+        Atomics.waitAsync = function(t,i,v,to) { try { return _oa.waitAsync(t,i,v,to); } catch(e) { return {async:false,value:'not-equal'}; } };
+      }
+    })();
+
+    // Hook ServiceWorker
+    if ('serviceWorker' in navigator) {
+      var _dummySW = function(u) { return { addEventListener:function(){}, removeEventListener:function(){}, dispatchEvent:function(){return true;}, state:"activated", scriptURL:u||"", onstatechange:null, onerror:null, postMessage:function(m){log("SW.postMessage:",m);} }; };
+      navigator.serviceWorker.controller = null;
+      navigator.serviceWorker.register = function(u, o) {
+        log("Intercepting ServiceWorker registration for:", u);
+        var d = _dummySW(u);
+        navigator.serviceWorker.controller = d;
+        var reg = {
+          active: d, installing: null, waiting: null,
+          scope: o ? o.scope : "/",
+          addEventListener:function(){}, removeEventListener:function(){}, dispatchEvent:function(){return true;},
+          update: function() { return Promise.resolve(reg); },
+          unregister: function() { return Promise.resolve(true); },
+          onupdatefound: null
+        };
+        return Promise.resolve(reg);
+      };
+      navigator.serviceWorker.getRegistration = function() { return Promise.resolve(null); };
+      navigator.serviceWorker.getRegistrations = function() { return Promise.resolve([]); };
+      navigator.serviceWorker.ready = new Promise(function(r) { r({active:null}); });
+    }
+
+    try {
+      var loc = {
+        href: origin + "index.html",
+        origin: origin.replace(/\\/$/, ""),
+        protocol: "http:",
+        host: "game.local",
+        hostname: "game.local",
+        pathname: "/index.html",
+        search: "", hash: "", port: "",
+        assign: function(){}, replace: function(){},
+        reload: function(){ window.location.reload(); }
+      };
+      try { Object.defineProperty(window, "location", { get: function(){ return loc; }, configurable: true }); } catch(e) {}
+      try { Object.defineProperty(document, "location", { get: function(){ return loc; }, configurable: true }); } catch(e) {}
+      try { Object.defineProperty(document, "URL", { get: function(){ return loc.href; }, configurable: true }); } catch(e) {}
+      try { Object.defineProperty(document, "baseURI", { get: function(){ return loc.href; }, configurable: true }); } catch(e) {}
+      try { Object.defineProperty(document, "cookie", { get: function(){ return ""; }, set: function(){}, configurable: true }); } catch(e) {}
+    } catch(e) {}
+    
+    try {
+        var s = {};
+        // Load persisted data from parent if accessible (srcdoc in Chrome inherits file:// origin)
+        try { if (parent && parent.localStorage) { var _d = parent.localStorage.getItem('__ghub_store__'); if (_d) { try { s = JSON.parse(_d); log("Loaded persisted storage"); } catch(e){} } } } catch(e) { log("Parent storage unavailable:", e.message); }
+        var _ps = function() { try { if (parent && parent.localStorage) parent.localStorage.setItem('__ghub_store__', JSON.stringify(s)); } catch(e){} };
+        var mockStorage = {
+            getItem: function(k) { return s.hasOwnProperty(k) ? String(s[k]) : null; },
+            setItem: function(k, v) { s[k] = String(v); _ps(); },
+            removeItem: function(k) { delete s[k]; _ps(); },
+            clear: function() { s = {}; _ps(); },
+            key: function(i) { return Object.keys(s)[i] || null; },
+            get length() { return Object.keys(s).length; }
+        };
+        if (!window.localStorage) Object.defineProperty(window, "localStorage", { get: function(){ return mockStorage; }, configurable: true });
+        if (!window.sessionStorage) Object.defineProperty(window, "sessionStorage", { get: function(){ return mockStorage; }, configurable: true });
+    } catch(e) {}
+
+    window.addEventListener('error', function(e) {
+      console.error("[Shim] uncaught:", (e.message||'[empty]'), "at", (e.filename||'[unknown]'), ":", e.lineno);
+    }, true);
+    document.addEventListener("mousedown",function(){setTimeout(function(){if(document.activeElement.tagName==="BODY"||document.activeElement.tagName==="IFRAME")window.focus()},0)});
+    window.addEventListener("keydown",function(e){if(e.key==="Escape")window.focus()},true);
+
+    // Post-init scan: fix any media elements that were created before hooks were installed
+    (function(){
+      var els = document.querySelectorAll('img, audio, video, source, link[rel="stylesheet"]');
+      for(var i = 0; i < els.length; i++){
+        var el = els[i];
+        var attr = el.hasAttribute('src') ? 'src' : (el.tagName === 'LINK' ? 'href' : null);
+        if(!attr) continue;
+        var val = el.getAttribute(attr);
+        if(val && !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')){
+          var resolved = resolve(val);
+          if(resolved !== val){
+            console.log("[Shim] post-init fix", el.tagName, val, "->", resolved.substring(0,60));
+            el.setAttribute(attr, resolved);
+          }
+        }
+      }
+    })();
+  })();<\/script>`;
+}
+
+function showOverlay(s, g) {
+  const ov = document.getElementById('overlay'); ov.classList.remove('hidden');
+  document.getElementById('ov-title').textContent = s === 'loading' ? (g.wip ? 'Loading WIP...' : 'Loading...') : 'Select a game';
+  document.getElementById('ov-body').textContent = g ? (g.locked ? 'This game is locked.' : (g.wip ? 'Bugs may occur.' : '')) : '';
+}
+function hideOverlay() { document.getElementById('overlay').classList.add('hidden'); }
+function setStatus(t, m) { document.getElementById('status-dot').className = t; document.getElementById('status-text').textContent = m; }
+
+function toggleFullscreen() { 
+  const w = document.getElementById('frame-wrap'); 
+  if (!document.fullscreenElement) {
+    w.requestFullscreen().catch(e => console.error(e));
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const frame = document.getElementById('game-frame');
+  if (document.fullscreenElement && frame) {
+    setTimeout(() => {
+      frame.focus();
+      if (frame.contentWindow) frame.contentWindow.focus();
+    }, 100);
+  }
+});
+
+function reloadGame() { if (currentIdx >= 0) selectGame(currentIdx); }
+function clearCache() { indexedDB.deleteDatabase('GHubCache'); location.reload(); }
+
+// Password
+function checkPassword() {
+  const val = document.getElementById('pwd-input').value;
+  if (val === PASSWORD) {
+    authenticated = true;
+    try { sessionStorage.setItem('ghub_auth', '1'); } catch(e) {}
+    document.getElementById('pwd-overlay').classList.remove('active');
+    document.getElementById('sync-btn').style.display = '';
+    document.getElementById('editor-btn').style.display = '';
+    // Re-init with local mode
+    window.location.reload();
+  } else {
+    document.getElementById('pwd-error').textContent = 'Wrong password';
+  }
+}
+function skipPassword() {
+  document.getElementById('pwd-overlay').classList.remove('active');
+  // Remove local=true and reload
+  const url = new URL(window.location);
+  url.searchParams.delete('local');
+  window.location.href = url.toString();
+}
+
+// Editor
+function toggleEditor() {
+  editorActive = !editorActive;
+  document.getElementById('editor-overlay').classList.toggle('active', editorActive);
+  document.getElementById('editor-btn').textContent = editorActive ? '\u2715 Close Editor' : '\u270E Edit Games';
+  if (editorActive) {
+    // Clone games for editing
+    editorGames = games.map(g => ({...g}));
+    editorFromDropbox = false;
+    document.getElementById('editor-source').textContent = IS_LOCAL ? '(local)' : '(remote)';
+    // Auto-select the currently selected game (if any)
+    editorSel = currentIdx >= 0 && currentIdx < editorGames.length ? currentIdx : -1;
+    editorRenderList();
+    editorRenderPreview();
+    if (editorSel >= 0) editorShowForm(); else editorClearForm();
+  }
+}
+
+function loadEditorFromDropbox() {
+  setStatus('loading', 'Fetching Dropbox games...');
+  fetch(normalizeDropbox(DROPBOX_URL))
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(data => {
+      editorGames = data.map(g => ({ title: g.title||'', url: g.url||'', tag: g.tag||'', type: g.type||'html', entry: g.entry||'index.html', icon: g.icon||'🎮', desc: g.desc||'', group: g.group||'', variant: g.variant||'', wip: !!g.wip, locked: !!g.locked }));
+      editorSel = -1;
+      editorFromDropbox = true;
+      document.getElementById('editor-source').textContent = '(Dropbox)';
+      editorRenderList();
+      editorClearForm();
+      editorRenderPreview();
+      setStatus('ok', 'Loaded ' + editorGames.length + ' games from Dropbox');
+    })
+    .catch(err => setStatus('err', 'Dropbox load failed: ' + err.message));
+}
+
+function editorClearForm() {
+  document.getElementById('editor-no-sel').style.display = 'flex';
+  document.getElementById('ed-form').style.display = 'none';
+}
+
+function editorRenderList() {
+  const list = document.getElementById('editor-list');
+  if (!editorGames.length) { list.innerHTML = '<div style="padding:20px; color:var(--text3);">Empty</div>'; return; }
+  list.innerHTML = '';
+  editorGames.forEach((g, i) => {
+    const row = document.createElement('div');
+    row.className = 'ed-game-row' + (i === editorSel ? ' active' : '');
+    row.draggable = true;
+    let iconHTML;
+    const iconUrl = normalizeDropbox(g.icon);
+    if (g.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) {
+      iconHTML = '<img src="' + esc(iconUrl) + '" onerror="this.parentNode.textContent=\'🎮\'">';
+    } else {
+      iconHTML = esc(g.icon || '🎮');
+    }
+    let groupTag = '';
+    if (g.group) groupTag = ' <span class="ed-row-group">' + esc(g.group) + (g.variant ? ' \u203A ' + esc(g.variant) : '') + '</span>';
+    row.innerHTML = '<div class="ed-drag">⠿</div><div class="ed-row-icon">' + iconHTML + '</div><div class="ed-row-meta"><div class="ed-row-name">' + esc(g.title||'Untitled') + '</div><div class="ed-row-tag">' + esc(g.tag||'') + groupTag + '</div></div><button class="ed-row-del" onclick="editorDeleteGame(event,'+i+')">\u2715</button>';
+    row.onclick = (e) => { if (!e.target.classList.contains('ed-row-del')) editorSelectGame(i); };
+    row.addEventListener('dragstart', () => editorDragSrc = i);
+    row.addEventListener('dragover', e => e.preventDefault());
+    row.addEventListener('drop', () => { if (editorDragSrc !== i) { const m = editorGames.splice(editorDragSrc, 1)[0]; editorGames.splice(i, 0, m); editorSel = i; editorRenderList(); editorShowForm(); } });
+    list.appendChild(row);
+  });
+}
+let editorDragSrc = -1;
+
+function editorSelectGame(i) { editorSel = i; editorRenderList(); editorShowForm(); }
+function editorShowForm() {
+  if (editorSel < 0) { editorClearForm(); return; }
+  const g = editorGames[editorSel];
+  document.getElementById('editor-no-sel').style.display = 'none';
+  document.getElementById('ed-form').style.display = 'flex';
+  document.getElementById('ef-title').value = g.title || '';
+  document.getElementById('ef-url').value = g.url || '';
+  document.getElementById('ef-tag').value = g.tag || '';
+  document.getElementById('ef-type').value = g.type || 'html';
+  document.getElementById('ef-entry').value = g.entry || 'index.html';
+  document.getElementById('ef-group').value = g.group || '';
+  document.getElementById('ef-variant').value = g.variant || '';
+  document.getElementById('ef-desc').value = g.desc || '';
+  document.getElementById('ef-icon').value = g.icon || '';
+  document.getElementById('ef-wip').checked = !!g.wip;
+  document.getElementById('ef-locked').checked = !!g.locked;
+  editorUpdateIconPreview(g.icon);
+  // Populate group datalist
+  const groups = [...new Set(editorGames.filter(x => x.group).map(x => x.group))];
+  document.getElementById('ed-group-list').innerHTML = groups.map(g => '<option value="' + esc(g) + '">').join('');
+}
+
+function editorFieldChange() {
+  if (editorSel < 0) return;
+  const g = editorGames[editorSel];
+  g.title = document.getElementById('ef-title').value;
+  g.tag = document.getElementById('ef-tag').value;
+  g.type = document.getElementById('ef-type').value;
+  g.entry = document.getElementById('ef-entry').value;
+  g.group = document.getElementById('ef-group').value;
+  g.variant = document.getElementById('ef-variant').value;
+  g.desc = document.getElementById('ef-desc').value;
+  g.wip = document.getElementById('ef-wip').checked;
+  g.locked = document.getElementById('ef-locked').checked;
+  editorRenderList();
+  editorRenderPreview();
+}
+function editorURLChange() { if (editorSel >= 0) { editorGames[editorSel].url = document.getElementById('ef-url').value; editorRenderPreview(); } }
+function editorIconChange() { if (editorSel >= 0) { const v = document.getElementById('ef-icon').value; editorGames[editorSel].icon = v; editorUpdateIconPreview(v); editorRenderList(); } }
+function editorFixURL() { const inp = document.getElementById('ef-url'); inp.value = normalizeDropbox(inp.value.trim()); editorURLChange(); }
+function editorFixIcon() { const inp = document.getElementById('ef-icon'); inp.value = normalizeDropbox(inp.value.trim()); editorIconChange(); }
+function editorUpdateIconPreview(v) { const p = document.getElementById('ef-icon-preview'); const u = normalizeDropbox(v); if (v && (u.startsWith('http') || u.includes('.'))) p.innerHTML = '<img src="' + esc(u) + '" onerror="this.parentNode.textContent=\'🎮\'">'; else p.innerHTML = esc(v || '🎮'); }
+
+function editorAddGame() {
+  editorGames.push({ title: '', url: '', tag: '', icon: '🎮', desc: '', type: 'html', entry: 'index.html', group: '', variant: '', wip: false, locked: false });
+  editorSel = editorGames.length - 1;
+  editorRenderList();
+  editorShowForm();
+  editorRenderPreview();
+}
+function editorDeleteGame(e, i) {
+  e.stopPropagation();
+  editorGames.splice(i, 1);
+  if (editorSel >= editorGames.length) editorSel = editorGames.length - 1;
+  editorRenderList();
+  editorShowForm();
+  editorRenderPreview();
+}
+
+function editorBuildJSON() {
+  return JSON.stringify(editorGames.map(g => {
+    const o = { title: g.title, url: g.url };
+    if (g.tag) o.tag = g.tag;
+    if (g.type !== 'html') o.type = g.type;
+    if (g.entry !== 'index.html') o.entry = g.entry;
+    if (g.icon && g.icon !== '🎮') o.icon = g.icon;
+    if (g.desc) o.desc = g.desc;
+    if (g.group) o.group = g.group;
+    if (g.variant) o.variant = g.variant;
+    if (g.wip) o.wip = true;
+    if (g.locked) o.locked = true;
+    return o;
+  }), null, 2);
+}
+
+function editorRenderPreview() {
+  const el = document.getElementById('editor-preview-content');
+  const lines = ['['];
+  editorGames.forEach((g, i) => {
+    const c = { title: g.title, url: g.url };
+    if (g.tag) c.tag = g.tag;
+    if (g.type !== 'html') c.type = g.type;
+    if (g.entry !== 'index.html') c.entry = g.entry;
+    if (g.icon && g.icon !== '🎮') c.icon = g.icon;
+    if (g.desc) c.desc = g.desc;
+    if (g.group) c.group = g.group;
+    if (g.variant) c.variant = g.variant;
+    if (g.wip) c.wip = true;
+    if (g.locked) c.locked = true;
+    lines.push('  {');
+    const ks = Object.keys(c);
+    ks.forEach((k, ki) => {
+      const v = c[k];
+      const vs = typeof v === 'boolean' ? '<span class="ed-jb">' + v + '</span>' : '<span class="ed-jv">"' + esc(v) + '"</span>';
+      lines.push('    <span class="ed-jk">"' + esc(k) + '"</span>: ' + vs + (ki < ks.length - 1 ? ',' : ''));
+    });
+    lines.push('  }' + (i < editorGames.length - 1 ? ',' : ''));
+  });
+  lines.push(']');
+  el.innerHTML = lines.join('\n');
+}
+
+function downloadJSON() {
+  const b = new Blob([editorBuildJSON()], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = 'games.json';
+  a.click();
+}
+
+function copyJSON() {
+  navigator.clipboard.writeText(editorBuildJSON()).then(() => setStatus('ok', 'Copied'));
+}
+
+function handleEditorImport(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      editorGames = JSON.parse(ev.target.result).map(g => ({ title: g.title||'', url: g.url||'', tag: g.tag||'', type: g.type||'html', entry: g.entry||'index.html', icon: g.icon||'🎮', desc: g.desc||'', group: g.group||'', variant: g.variant||'', wip: !!g.wip, locked: !!g.locked }));
+      editorSel = -1;
+      editorRenderList();
+      editorClearForm();
+      editorRenderPreview();
+    } catch(err) { setStatus('err', 'Import failed'); }
+  };
+  r.readAsText(f);
+}
+
+function exportToDropbox() {
+  if (!editorFromDropbox) {
+    setStatus('err', 'Load from Dropbox first before exporting');
+    return;
+  }
+  const token = prompt('Enter Dropbox Access Token:');
+  if (!token) return;
+  const path = '/gs/games.json';
+  setStatus('loading', 'Uploading to Dropbox...');
+  const content = editorBuildJSON();
+  fetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/octet-stream',
+      'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', autorename: false, mute: false, strict_conflict: false })
+    },
+    body: content
+  })
+  .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+  .then(({ok, data}) => {
+    if (ok) {
+      setStatus('ok', 'Uploaded to ' + (data.path_display || path));
+    } else {
+      throw new Error((data && data.error_summary) || 'Upload failed');
+    }
+  })
+  .catch(e => setStatus('err', 'Dropbox error: ' + e.message));
+}
+
+// Game ZIP upload
+function handleGameUpload(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const slug = f.name.replace(/\.zip$/i, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  const title = prompt('Game title:', slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+  if (!title) return;
+  const tag = prompt('Tag (category):', 'General') || 'General';
+  const statusEl = document.getElementById('editor-upload-status');
+  statusEl.textContent = 'Uploading ' + f.name + '...';
+  const reader = new FileReader();
+  reader.onload = () => {
+    fetch('http://localhost:8765/upload-game', {
+      method: 'POST',
+      headers: {
+        'X-Slug': slug, 'X-Title': title, 'X-Tag': tag,
+        'Content-Type': 'application/zip',
+        'Content-Length': f.size
+      },
+      body: new Uint8Array(reader.result)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      statusEl.textContent = slug + ' added! Refresh sidebar.';
+      // Reload games and refresh editor
+      loadURL();
+      setTimeout(() => toggleEditor(), 500);
+    })
+    .catch(err => {
+      statusEl.textContent = 'Error: ' + err.message;
+      setStatus('err', 'Upload failed');
+    });
+  };
+  reader.readAsArrayBuffer(f);
+  e.target.value = '';
+}
+
+// Upload single HTML
+function handleHtmlUpload(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const slug = f.name.replace(/\.html?$/i, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  const title = prompt('Game title:', slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+  if (!title) return;
+  const tag = prompt('Tag (category):', 'General') || 'General';
+  const statusEl = document.getElementById('editor-upload-status');
+  statusEl.textContent = 'Uploading ' + f.name + '...';
+  const reader = new FileReader();
+  reader.onload = () => {
+    fetch('http://localhost:8765/upload-html', {
+      method: 'POST',
+      headers: {
+        'X-Slug': slug, 'X-Title': title, 'X-Tag': tag,
+        'Content-Type': 'text/html',
+      },
+      body: reader.result
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      statusEl.textContent = slug + ' added! Refresh sidebar.';
+      loadURL();
+      setTimeout(() => toggleEditor(), 500);
+    })
+    .catch(err => {
+      statusEl.textContent = 'Error: ' + err.message;
+      setStatus('err', 'Upload failed');
+    });
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+}
+
+// Upload from URL
+function uploadFromURL() {
+  const url = prompt('Enter game URL (direct link to HTML or game page):');
+  if (!url) return;
+  const statusEl = document.getElementById('editor-upload-status');
+  // Extract title from URL
+  const parts = url.split('/').pop().replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Imported Game';
+  const title = prompt('Game title:', parts);
+  if (!title) return;
+  const tag = prompt('Tag (category):', 'Imported') || 'Imported';
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  statusEl.textContent = 'Fetching from URL...';
+  fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(html => {
+      if (!html.includes('<html') && !html.includes('<!DOCTYPE')) {
+        // Not an HTML file - try to add as remote URL game
+        addRemoteGame(title, slug, tag, url);
+        statusEl.textContent = slug + ' added as remote URL!';
+        loadURL();
+        setTimeout(() => toggleEditor(), 500);
+        return;
+      }
+      return fetch('http://localhost:8765/upload-html', {
+        method: 'POST',
+        headers: {
+          'X-Slug': slug, 'X-Title': title, 'X-Tag': tag,
+          'Content-Type': 'text/html',
+        },
+        body: html
+      }).then(r => r.json()).then(data => {
+        if (data.error) throw new Error(data.error);
+        statusEl.textContent = slug + ' added from URL!';
+        loadURL();
+        setTimeout(() => toggleEditor(), 500);
+      });
+    })
+    .catch(err => {
+      // If fetch fails, add as remote URL game
+      if (confirm('Could not download the file. Add as remote URL instead?')) {
+        addRemoteGame(title, slug, tag, url);
+        statusEl.textContent = slug + ' added as remote URL!';
+      } else {
+        statusEl.textContent = 'Upload from URL failed: ' + err.message;
+      }
+    });
+}
+
+function addRemoteGame(title, slug, tag, url) {
+  editorGames.push({ title, url, tag, type: 'html', entry: 'index.html', icon: '🌐', desc: '', group: '', variant: '', wip: false, locked: false, _slug: slug });
+  editorRenderList();
+  editorRenderPreview();
+}
+
+// ---- Dropbox upload helpers ----
+
+function dropboxUploadFile(file, dropboxPath, onProgress) {
+  return new Promise((resolve, reject) => {
+    const token = prompt('Enter Dropbox Access Token:');
+    if (!token) return reject('No token provided');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://content.dropboxapi.com/2/files/upload', true);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+      xhr.setRequestHeader('Dropbox-API-Arg', JSON.stringify({
+        path: dropboxPath, mode: 'overwrite', autorename: false, mute: false, strict_conflict: false
+      }));
+      xhr.upload.onprogress = (e) => { if (onProgress && e.lengthComputable) onProgress(e.loaded / e.total); };
+      xhr.onload = () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) resolve({ ...data, token });
+          else reject(data.error_summary || JSON.stringify(data));
+        } catch(e) { reject(xhr.responseText); }
+      };
+      xhr.onerror = () => reject('Network error');
+      xhr.send(reader.result);
+    };
+    reader.onerror = () => reject('File read error');
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function dropboxCreateSharedLink(path, token) {
+  return fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, settings: { requested_visibility: 'public' } })
+  }).then(r => {
+    if (r.status === 409) {
+      return fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, direct_only: true })
+      }).then(r2 => r2.json()).then(d => {
+        if (d.links && d.links.length) return { url: d.links[0].url };
+        throw new Error('No existing shared link found');
+      });
+    }
+    return r.json();
+  }).then(data => {
+    if (data.error) throw new Error(data.error_summary || JSON.stringify(data));
+    return data.url;
+  });
+}
+
+function dropboxSharedToDirect(url) {
+  return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '');
+}
+
+function addGameFromDropbox(title, slug, tag, directUrl, type) {
+  const gameUrl = directUrl;
+  editorGames.push({
+    title, url: gameUrl, tag, type: type || 'html', entry: 'index.html',
+    icon: '🎮', desc: '', group: '', variant: '', wip: false, locked: false, _slug: slug
+  });
+  editorSel = editorGames.length - 1;
+  editorRenderList();
+  editorShowForm();
+  editorRenderPreview();
+  document.getElementById('editor-upload-status').textContent = slug + ' added from Dropbox!';
+}
+
+function handleGameUploadDropbox(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const slug = f.name.replace(/\.zip$/i, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  const title = prompt('Game title:', slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+  if (!title) return;
+  const tag = prompt('Tag (category):', 'General') || 'General';
+  const statusEl = document.getElementById('editor-upload-status');
+  statusEl.textContent = 'Uploading ' + f.name + ' to Dropbox...';
+  dropboxUploadFile(f, '/gs/' + slug + '.zip', p => {
+    statusEl.textContent = 'Uploading ' + f.name + ' to Dropbox... (' + Math.round(p * 100) + '%)';
+  })
+    .then(result => dropboxCreateSharedLink('/gs/' + slug + '.zip', result.token))
+    .then(sharedUrl => {
+      const directUrl = dropboxSharedToDirect(sharedUrl);
+      addGameFromDropbox(title, slug, tag, directUrl, 'zip');
+      statusEl.textContent = slug + ' uploaded & added from Dropbox!';
+      loadURL();
+    })
+    .catch(err => {
+      statusEl.textContent = 'Dropbox upload failed: ' + (err.message || err);
+      setStatus('err', 'Dropbox upload failed');
+    });
+  e.target.value = '';
+}
+
+function handleHtmlUploadDropbox(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const slug = f.name.replace(/\.html?$/i, '').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  const title = prompt('Game title:', slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+  if (!title) return;
+  const tag = prompt('Tag (category):', 'General') || 'General';
+  const statusEl = document.getElementById('editor-upload-status');
+  statusEl.textContent = 'Uploading ' + f.name + ' to Dropbox...';
+  dropboxUploadFile(f, '/gs/' + slug + '.html', p => {
+    statusEl.textContent = 'Uploading ' + f.name + ' to Dropbox... (' + Math.round(p * 100) + '%)';
+  })
+    .then(result => dropboxCreateSharedLink('/gs/' + slug + '.html', result.token))
+    .then(sharedUrl => {
+      const directUrl = dropboxSharedToDirect(sharedUrl);
+      addGameFromDropbox(title, slug, tag, directUrl, 'html');
+      statusEl.textContent = slug + ' uploaded & added from Dropbox!';
+      loadURL();
+    })
+    .catch(err => {
+      statusEl.textContent = 'Dropbox upload failed: ' + (err.message || err);
+      setStatus('err', 'Dropbox upload failed');
+    });
+  e.target.value = '';
+}
+
+// Upload dropdown toggle
+function toggleUploadDD() {
+  document.getElementById('upload-dd-menu').classList.toggle('active');
+}
+// Close upload dropdown on outside click
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('upload-dd-menu');
+  if (dd && !e.target.closest('.upload-dd-wrap')) dd.classList.remove('active');
+});
+
+// Dropbox URL picker
+let dbpToken = null;
+let dbpPath = '';
+let dbpTargetField = 'ef-url';
+
+function dropboxURLPicker() {
+  dbpTargetField = 'ef-url';
+  _openDBPicker();
+}
+
+function dropboxIconPicker() {
+  dbpTargetField = 'ef-icon';
+  _openDBPicker();
+}
+
+function _openDBPicker() {
+  if (!dbpToken) {
+    dbpToken = prompt('Dropbox API token for file browsing:');
+    if (!dbpToken) { dbpToken = ''; return; }
+  }
+  dbpPath = '';
+  document.getElementById('dbp-overlay').classList.add('active');
+  dbpLoadDropbox('');
+}
+
+function toggleDBP() {
+  document.getElementById('dbp-overlay').classList.remove('active');
+}
+
+function dbpLoadDropbox(path) {
+  dbpPath = path;
+  document.getElementById('dbp-path').innerHTML = path ? '<span>' + esc(path) + '</span>' : '<span>/</span>';
+  document.getElementById('dbp-footer').textContent = 'Loading...';
+  document.getElementById('dbp-content').innerHTML = '<div style="padding:20px;color:var(--text3);">Loading...</div>';
+  fetch('https://api.dropboxapi.com/2/files/list_folder', {
+    method: 'POST',
+    headers: {'Authorization': 'Bearer ' + dbpToken, 'Content-Type': 'application/json'},
+    body: JSON.stringify({path: path || '', recursive: false})
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error_summary || JSON.stringify(data.error));
+      const entries = data.entries || [];
+      const folders = entries.filter(e => e['.tag'] === 'folder');
+      const files = entries.filter(e => e['.tag'] === 'file');
+      const all = [...folders, ...files];
+      if (!all.length) {
+        document.getElementById('dbp-content').innerHTML = '<div style="padding:20px;color:var(--text3);">Empty folder</div>';
+        document.getElementById('dbp-footer').textContent = '0 items';
+        return;
+      }
+      let html = '';
+      all.forEach(e => {
+        const isDir = e['.tag'] === 'folder';
+        const icon = isDir ? '&#x1F4C1;' : '&#x1F4C4;';
+        const click = isDir ? ' onclick="dbpLoadDropbox(\'' + esc(e.path_lower) + '\')"' : '';
+        const pickBtn = isDir ? '' : ' <button class="dbp-pick show" onclick="dbpSelectFile(\'' + esc(e.path_lower) + '\', \'' + esc(e.name) + '\')">Use URL</button>';
+        html += '<div class="dbp-entry">' +
+          '<span class="dbp-icon">' + icon + '</span>' +
+          '<span class="dbp-name"' + click + ' style="' + (isDir ? 'cursor:pointer;color:var(--blue);' : '') + '">' + esc(e.name) + '</span>' +
+          pickBtn +
+          '</div>';
+      });
+      document.getElementById('dbp-content').innerHTML = html;
+      document.getElementById('dbp-footer').textContent = (path || '/') + ' — ' + all.length + ' items';
+    })
+    .catch(err => {
+      document.getElementById('dbp-content').innerHTML = '<div style="padding:20px;color:var(--red);">Error: ' + err.message + '</div>';
+      document.getElementById('dbp-footer').textContent = 'Error';
+    });
+}
+
+function dbpSelectFile(path, name) {
+  document.getElementById('dbp-footer').textContent = 'Creating shared link for ' + name + '...';
+  fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+    method: 'POST',
+    headers: {'Authorization': 'Bearer ' + dbpToken, 'Content-Type': 'application/json'},
+    body: JSON.stringify({path: path, settings: {requested_visibility: 'public'}})
+  })
+    .then(r => {
+      if (r.status === 409) {
+        // Shared link already exists - get existing one
+        return fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+          method: 'POST',
+          headers: {'Authorization': 'Bearer ' + dbpToken, 'Content-Type': 'application/json'},
+          body: JSON.stringify({path: path, direct_only: true})
+        }).then(r2 => r2.json()).then(d => {
+          if (d.links && d.links.length) return {url: d.links[0].url};
+          throw new Error('No existing shared link found');
+        });
+      }
+      return r.json();
+    })
+    .then(data => {
+      if (data.error) throw new Error(data.error_summary || JSON.stringify(data));
+      const sharedUrl = data.url;
+      const directUrl = sharedUrl.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '');
+      document.getElementById(dbpTargetField).value = directUrl;
+      if (dbpTargetField === 'ef-url') editorURLChange(); else editorIconChange();
+      toggleDBP();
+      document.getElementById('editor-upload-status').textContent = (dbpTargetField === 'ef-url' ? 'URL' : 'Icon') + ' set from Dropbox: ' + name;
+    })
+    .catch(err => {
+      document.getElementById('dbp-footer').textContent = 'Error: ' + err.message;
+    });
+}
+
+// Thumbnail upload
+let thumbFile = null;
+function handleThumbUpload(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  thumbFile = f;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('ef-thumb-canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const sizeSlider = document.getElementById('ef-thumb-size');
+      sizeSlider.value = Math.min(img.width, img.height, 256);
+      editorThumbUpdatePreview();
+      document.getElementById('ef-thumb-preview').style.display = '';
+      document.getElementById('ef-thumb-status').textContent = '';
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(f);
+  e.target.value = '';
+}
+
+function editorThumbUpdatePreview() {
+  const canvas = document.getElementById('ef-thumb-canvas');
+  const size = parseInt(document.getElementById('ef-thumb-size').value);
+  const img = new Image();
+  img.onload = () => {
+    const ctx = canvas.getContext('2d');
+    canvas.width = size;
+    canvas.height = size;
+    ctx.clearRect(0, 0, size, size);
+    const s = Math.min(img.width, img.height);
+    const ox = (img.width - s) / 2;
+    const oy = (img.height - s) / 2;
+    ctx.drawImage(img, ox, oy, s, s, 0, 0, size, size);
+    document.getElementById('ef-thumb-size-label').textContent = size + 'x' + size;
+  };
+  img.src = canvas.toDataURL();
+}
+
+function editorCancelThumbnail() {
+  document.getElementById('ef-thumb-preview').style.display = 'none';
+  thumbFile = null;
+}
+
+function editorSaveThumbnailDropbox() {
+  if (editorSel < 0) return;
+  const g = editorGames[editorSel];
+  const slug = g.slug || g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  const statusEl = document.getElementById('ef-thumb-status');
+  statusEl.textContent = 'Uploading to Dropbox...';
+  document.getElementById('ef-thumb-preview').style.display = 'none';
+
+  const token = prompt('Enter Dropbox Access Token:');
+  if (!token) return;
+
+  const canvas = document.getElementById('ef-thumb-canvas');
+  canvas.toBlob(blob => {
+    const ext = blob.type === 'image/jpeg' ? '.jpg' : blob.type === 'image/gif' ? '.gif' : '.png';
+    const dropboxPath = '/gs/thumbnails/' + slug + ext;
+    const reader = new FileReader();
+    reader.onload = () => {
+      fetch('https://content.dropboxapi.com/2/files/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/octet-stream',
+          'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath, mode: 'overwrite', autorename: false, mute: false, strict_conflict: false })
+        },
+        body: reader.result
+      })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(({ ok, data }) => {
+          if (!ok) throw new Error((data && data.error_summary) || 'Upload failed');
+          return dropboxCreateSharedLink(dropboxPath, token);
+        })
+        .then(sharedUrl => {
+          const directUrl = dropboxSharedToDirect(sharedUrl);
+          g.icon = directUrl;
+          editorFieldChange();
+          statusEl.textContent = 'Uploaded to Dropbox!';
+          setStatus('ok', 'Thumbnail uploaded to Dropbox');
+        })
+        .catch(err => {
+          statusEl.textContent = 'Error: ' + (err.message || err);
+          setStatus('err', 'Thumbnail Dropbox upload failed');
+        });
+    };
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+function editorSaveThumbnail() {
+  if (editorSel < 0) return;
+  const g = editorGames[editorSel];
+  const slug = g.slug || g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  const statusEl = document.getElementById('ef-thumb-status');
+  statusEl.textContent = 'Saving...';
+  const canvas = document.getElementById('ef-thumb-canvas');
+  canvas.toBlob(blob => {
+    const ext = blob.type === 'image/jpeg' ? '.jpg' : blob.type === 'image/gif' ? '.gif' : '.png';
+    // Save locally via POST
+    fetch('http://localhost:8765/upload-thumbnail/' + slug, {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type, 'Content-Length': blob.size },
+      body: blob
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      const iconUrl = 'local-games/thumbnails/' + slug + ext;
+      g.icon = iconUrl;
+      editorFieldChange();
+      document.getElementById('ef-thumb-preview').style.display = 'none';
+      statusEl.textContent = 'Saved!';
+      setStatus('ok', 'Thumbnail updated');
+    })
+    .catch(err => {
+      statusEl.textContent = 'Error: ' + err.message;
+      setStatus('err', 'Thumbnail save failed');
+    });
+  });
+}
+
+// File browser
+let fbActiveTab = 'local';
+let fbLocalPath = '';
+let fbLocalStack = [];
+let fbDropboxToken = null;
+let fbDropboxPath = '';
+let fbDropboxStack = [];
+
+function toggleFB() {
+  const ov = document.getElementById('fb-overlay');
+  const active = !ov.classList.contains('active');
+  ov.classList.toggle('active', active);
+  if (active) {
+    fbActiveTab = 'local';
+    fbLocalPath = '';
+    fbLocalStack = [];
+    switchFBTab('local');
+  }
+}
+
+function switchFBTab(tab) {
+  fbActiveTab = tab;
+  document.querySelectorAll('.fb-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (tab === 'local') {
+    fbLocalStack = [];
+    fbLoadLocal('');
+  } else {
+    if (!fbDropboxToken) {
+      fbDropboxToken = prompt('Dropbox API token for browsing:');
+      if (!fbDropboxToken) fbDropboxToken = '';
+    }
+    if (fbDropboxToken) {
+      fbDropboxPath = '';
+      fbDropboxStack = [];
+      fbLoadDropbox('');
+    } else {
+      document.getElementById('fb-content').innerHTML = '<div style="padding:20px;color:var(--text3);">No token provided.</div>';
+      document.getElementById('fb-status').textContent = 'Enter a Dropbox API token to browse.';
+    }
+  }
+}
+
+function fbLoadLocal(path, pushStack) {
+  if (pushStack !== false && path !== '') fbLocalStack.push(fbLocalPath);
+  fbLocalPath = path;
+  document.getElementById('fb-status').textContent = 'Loading...';
+  fetch('/api/files?path=' + encodeURIComponent(path))
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      fbRender(data.files || [], path, 'local');
+      document.getElementById('fb-status').textContent = (path || '/') + ' — ' + (data.files||[]).length + ' items';
+    })
+    .catch(err => {
+      document.getElementById('fb-content').innerHTML = '<div style="padding:20px;color:var(--red);">Error: ' + err.message + '</div>';
+      document.getElementById('fb-status').textContent = 'Error loading';
+    });
+}
+
+function fbLoadDropbox(path) {
+  fbDropboxPath = path;
+  document.getElementById('fb-status').textContent = 'Loading Dropbox...';
+  fetch('https://api.dropboxapi.com/2/files/list_folder', {
+    method: 'POST',
+    headers: {'Authorization': 'Bearer ' + fbDropboxToken, 'Content-Type': 'application/json'},
+    body: JSON.stringify({path: path || '', recursive: false})
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error_summary || data.error_reason || JSON.stringify(data.error));
+      const entries = (data.entries || []).map(e => ({
+        name: e.name,
+        size: e.size || 0,
+        is_dir: e['.tag'] === 'folder',
+        mtime: (e.server_modified ? new Date(e.server_modified).getTime()/1000 : 0),
+        path_lower: e.path_lower,
+        id: e.id
+      }));
+      fbRender(entries, path, 'dropbox');
+      document.getElementById('fb-status').textContent = (path || '/') + ' — ' + entries.length + ' items';
+    })
+    .catch(err => {
+      document.getElementById('fb-content').innerHTML = '<div style="padding:20px;color:var(--red);">Dropbox error: ' + err.message + '</div>';
+      document.getElementById('fb-status').textContent = 'Dropbox error';
+    });
+}
+
+function fbRender(entries, currentPath, source) {
+  const content = document.getElementById('fb-content');
+  const pathEl = document.getElementById('fb-path');
+  const parts = currentPath ? currentPath.replace(/^\/+/, '').split('/').filter(Boolean) : [];
+  let html = '';
+  if (parts.length) {
+    html += '<span class="fb-path-btn" onclick="fbNav(\'\')">/</span>';
+    let acc = '';
+    parts.forEach((p, i) => {
+      if (i > 0) acc += '/';
+      acc += p;
+      html += '<span style="color:var(--text3);">/</span>';
+      if (i === parts.length - 1) {
+        html += '<span style="color:var(--text);">' + esc(p) + '</span>';
+      } else {
+        html += '<span class="fb-path-btn" onclick="fbNav(\'' + esc(acc) + '\')">' + esc(p) + '</span>';
+      }
+    });
+  } else {
+    html = '<span style="color:var(--text);">/</span>';
+  }
+  pathEl.innerHTML = html;
+
+  if (!entries.length) {
+    content.innerHTML = '<div style="padding:20px;color:var(--text3);">Empty directory</div>';
+    return;
+  }
+  content.innerHTML = entries.map(e => {
+    const isDir = e.is_dir;
+    const icon = isDir ? '&#x1F4C1;' : (
+      e.name.match(/\.(zip)$/i) ? '&#x1F4E6;' : (
+        e.name.match(/\.(png|jpg|jpeg|gif|webp|svg)$/i) ? '&#x1F5BC;' : (
+          e.name.match(/\.(html?)$/i) ? '&#x1F4D6;' : (
+            e.name.match(/\.(js|json)$/i) ? '&#x2699;' : '&#x1F4C4;'))));
+    const sz = isDir ? '' : formatSize(e.size);
+    const click = isDir ? ' onclick="fbNav(\'' + esc(e.name) + '\')"' : '';
+    const del = ' onclick="fbDelete(\'' + esc(e.name) + '\', event)"';
+    return '<div class="fb-entry">' +
+      '<span class="fb-icon">' + icon + '</span>' +
+      '<span class="fb-name"' + click + ' style="' + (isDir ? 'cursor:pointer;color:var(--blue);' : '') + '">' + esc(e.name) + '</span>' +
+      '<span class="fb-size">' + sz + '</span>' +
+      '<button class="fb-del" title="Delete"' + del + '>&#x2715;</button>' +
+      '</div>';
+  }).join('');
+}
+
+function fbNav(name) {
+  if (fbActiveTab === 'local') {
+    const newPath = name === '' ? '' : (fbLocalPath ? fbLocalPath + '/' + name : name);
+    fbLocalStack.push(fbLocalPath);
+    fbLoadLocal(newPath, false);
+  } else {
+    const newPath = name === '' ? '' : (fbDropboxPath ? fbDropboxPath + '/' + name : '/' + name);
+    fbDropboxStack.push(fbDropboxPath || '');
+    fbLoadDropbox(newPath);
+  }
+}
+
+function fbDelete(name, event) {
+  if (event) event.stopPropagation();
+  const path = fbActiveTab === 'local'
+    ? (fbLocalPath ? fbLocalPath + '/' + name : name)
+    : (fbDropboxPath ? fbDropboxPath + '/' + name : '/' + name);
+  if (!confirm('Delete "' + path + '"?')) return;
+  if (fbActiveTab === 'local') {
+    document.getElementById('fb-status').textContent = 'Deleting...';
+    fetch('/api/delete-file', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path: path})
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error || JSON.stringify(data));
+        document.getElementById('fb-status').textContent = 'Deleted: ' + path;
+        fbLoadLocal(fbLocalPath, false);
+      })
+      .catch(err => {
+        document.getElementById('fb-status').textContent = 'Delete failed: ' + err.message;
+      });
+  } else {
+    document.getElementById('fb-status').textContent = 'Deleting from Dropbox...';
+    fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + fbDropboxToken, 'Content-Type': 'application/json'},
+      body: JSON.stringify({path: path})
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error_summary || JSON.stringify(data));
+        document.getElementById('fb-status').textContent = 'Deleted: ' + path;
+        fbLoadDropbox(fbDropboxPath);
+      })
+      .catch(err => {
+        document.getElementById('fb-status').textContent = 'Dropbox delete failed: ' + err.message;
+      });
+  }
+}
+
+function formatSize(bytes) {
+  if (bytes === 0) return '';
+  const units = ['B','KB','MB','GB'];
+  let i = 0;
+  let size = bytes;
+  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+  return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+}
+
+// Auto-load: use LOCAL_GAMES on file://, or fetch from DEFAULT_URL
+// Feature detection for file:// compatibility
+var FEATURES = {};
+(function() {
+  try { var _s = new SharedArrayBuffer(1); FEATURES.sab = true; } catch(e) { FEATURES.sab = false; }
+  try { FEATURES.sw = 'serviceWorker' in navigator; } catch(e) { FEATURES.sw = false; }
+  try { FEATURES.coop = !!window.crossOriginIsolated; } catch(e) { FEATURES.coop = false; }
+
+  var el = document.getElementById('features');
+  if (el) {
+    var missing = [];
+    if (!FEATURES.sab) missing.push('SAB');
+    if (!FEATURES.sw) missing.push('SW');
+    if (!FEATURES.coop) missing.push('COOP');
+    if (!FEATURES.sab && !FEATURES.coop) missing = ['COOP/COEP'];
+    el.textContent = missing.length ? '\u26a0\ufe0f file://: ' + missing.join(', ') + ' unavailable' : '';
+    el.title = missing.length ? 'Some threaded games may not work. Use serve.bat/serve.sh for full support.' : 'All features available';
+  }
+})();
+
+if (window.location.protocol === 'file:' && !IS_LOCAL && typeof LOCAL_GAMES !== 'undefined' && LOCAL_GAMES && LOCAL_GAMES.length) {
+  games = LOCAL_GAMES;
+  // Convert absolute file:// URLs to relative paths so they resolve correctly
+  // through the Flatpak document portal (which maps /home/dank/.../GHub/ to
+  // /run/user/.../doc/<hash>/).  Both gamehub.html and local-games/ live under
+  // the same GHub directory, so stripping the project root leaves a relative
+  // path that works in both normal file:// and portal-translated environments.
+  const PROJECT_BASE = '/home/dank/Documents/Projects/GHub/';
+  games.forEach(g => {
+    if (g.url && g.url.startsWith('file://')) {
+      const diskPath = g.url.replace('file://', '');
+      if (diskPath.startsWith(PROJECT_BASE)) {
+        g.url = diskPath.substring(PROJECT_BASE.length);
+      }
+    }
+  });
+  renderSidebar();
+  document.getElementById('game-bar').style.display = 'flex';
+  document.getElementById('frame-wrap').style.display = 'block';
+  setStatus('ok', 'Loaded ' + games.length + ' local games \u26a0\ufe0f file://');
+} else if (window.location.protocol === 'file:' && !IS_LOCAL && DEFAULT_URL) {
+  setStatus('loading', 'No local games, fetching from Dropbox...');
+  document.getElementById('url-input').value = DEFAULT_URL;
+  loadURL();
+} else if (DEFAULT_URL) {
+  document.getElementById('url-input').value = DEFAULT_URL;
+  loadURL();
+}
+</script>
+</body>
+</html>
