@@ -136,14 +136,23 @@
   },
   {
     "title": "Fruit Ninja",
-    "url": "local-games/fruit-ninja/index.html",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/ijylylufiji71zgbos135/fruit-ninja.zip?rlkey=m9jna5f6b88b7hsadng1dyeql",
     "tag": "Arcade",
+    "type": "zip",
     "icon": "thumbnails/fruit-ninja.png"
   },
   {
     "title": "Tomb of the Mask",
-    "url": "local-games/tomb-of-the-mask/index.html",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/w2pnutkaxsq5asjov9jz3/totm.zip?rlkey=f8eunfg1a439mq48f67kau0ne",
     "tag": "Arcade",
+    "type": "zip",
     "icon": "thumbnails/tomb-of-the-mask.png"
+  },
+  {
+    "title": "Traffic Rider",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/buqmlxd85kwztkvu1g70j/traffic-rider.zip?rlkey=kuw7272uyowi4ec8d3vkkq6lc",
+    "tag": "Racing",
+    "type": "zip",
+    "icon": "thumbnails/traffic-rider.png"
   }
 ]
