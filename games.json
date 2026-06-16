@@ -153,6 +153,19 @@
     "url": "https://dl.dropboxusercontent.com/scl/fi/buqmlxd85kwztkvu1g70j/traffic-rider.zip?rlkey=kuw7272uyowi4ec8d3vkkq6lc",
     "tag": "Racing",
     "type": "zip",
-    "icon": "thumbnails/traffic-rider.png"
+    "icon": "thumbnails/traffic-rider.png",
+    "locked": true
+  },
+  {
+    "title": "Appel",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/9c0v5k7qrnkeu3tbpkyk5/appel.html?rlkey=67fiwaxyxvy8z32mvzdsgkwht",
+    "tag": "Arcade",
+    "icon": "thumbnails/appel.png"
+  },
+  {
+    "title": "Nitro Racing",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/zq0vg3cy140v02mr0jp9o/nitro-racing.html?rlkey=8z7m8a7dh2aeadb39feh7dwuz",
+    "tag": "Racing",
+    "icon": "thumbnails/nitro-racing.png"
   }
 ]
