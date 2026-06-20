@@ -103,8 +103,7 @@
     "title": "Five Nights at Epstein",
     "url": "https://dl.dropboxusercontent.com/scl/fi/0flym3r4qx90p4uab8ejg/five-nights-at-epstein.html?rlkey=f12dxc38twtorv79ig2n80tzx&dl=0",
     "tag": "General",
-    "icon": "thumbnails/five-nights-at-epstein.png",
-    "locked": true
+    "icon": "thumbnails/five-nights-at-epstein.png"
   },
   {
     "title": "Stack",
@@ -183,20 +182,6 @@
     "icon": "thumbnails/cut-the-rope.png"
   },
   {
-    "title": "Flappy Bird",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/x3t20boapc7ayqxnfgvey/flappy-bird.zip?rlkey=l979m3vojg30b88200y4m14ra",
-    "tag": "Arcade",
-    "type": "zip",
-    "icon": "thumbnails/flappy-bird.png"
-  },
-  {
-    "title": "Friendly Fire",
-    "url": "https://dl.dropboxusercontent.com/scl/fi/wsdu3m4rs2xv0dckgvd07/friendly-fire.zip?rlkey=yf7auakel3qay8r1wb0ul0i9d",
-    "tag": "Arcade",
-    "type": "zip",
-    "icon": "thumbnails/friendly-fire.png"
-  },
-  {
     "title": "Hextris",
     "url": "https://dl.dropboxusercontent.com/scl/fi/tnqyg8ghhevh0ta8cldew/hextris.zip?rlkey=a9dez7mbqb3qng54df43ro7o2",
     "tag": "Puzzle",
@@ -208,6 +193,7 @@
     "url": "https://dl.dropboxusercontent.com/scl/fi/odmscos9vtgc3dj7fae85/bendy.zip?rlkey=2a6x3e6aprguokppokch7azg7",
     "tag": "Horror",
     "type": "zip",
-    "icon": "thumbnails/bendy.png"
+    "icon": "thumbnails/bendy.png",
+    "wip": true
   }
 ]

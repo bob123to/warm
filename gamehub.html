@@ -212,6 +212,7 @@
     <div id="game-bar">
       <span id="gb-title" style="flex:1; font-weight:500;"></span>
       <button class="tb-btn" onclick="toggleFullscreen()">Fullscreen</button>
+      <button class="tb-btn" onclick="showUsage()">Usage</button>
       <button class="tb-btn" onclick="reloadGame()">Reload</button>
     </div>
     <div id="frame-wrap">
@@ -225,7 +226,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.2.0</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.3.0</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -240,6 +241,36 @@
     <div id="pwd-error"></div>
   </div>
 </div>
+
+<!-- Usage overlay -->
+<div id="usage-overlay">
+  <div id="usage-box">
+    <div id="usage-topbar"><span class="logo">System Usage</span><button id="usage-close" onclick="toggleUsage()">&#x2715; Close</button></div>
+    <div id="usage-body">
+      <div class="usage-section"><div class="usage-label">Memory</div><div id="usage-memory" class="usage-value">Loading...</div></div>
+      <div class="usage-section"><div class="usage-label">Blob URLs</div><div id="usage-blobs" class="usage-value">0</div></div>
+      <div class="usage-section"><div class="usage-label">Resources</div><div id="usage-resources" class="usage-value">0</div></div>
+      <div class="usage-section"><div class="usage-label">Games Cached</div><div id="usage-games" class="usage-value">0</div></div>
+      <div class="usage-section"><div class="usage-label">Display</div><div id="usage-display" class="usage-value">-</div></div>
+      <div class="usage-section"><div class="usage-label">Connection</div><div id="usage-connection" class="usage-value">-</div></div>
+      <div class="usage-section"><div class="usage-label">User Agent</div><div id="usage-ua" class="usage-value" style="font-size:10px;word-break:break-all;">-</div></div>
+    </div>
+  </div>
+</div>
+
+<style>
+#usage-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1800; }
+#usage-overlay.active { display: flex; }
+#usage-box { background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; width: 400px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+#usage-topbar { height: 38px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); gap: 8px; }
+#usage-topbar .logo { font-size: 12px; font-weight: 600; }
+#usage-close { margin-left: auto; height: 24px; padding: 0 8px; background: transparent; border: 1px solid var(--line2); border-radius: 3px; color: var(--text3); cursor: pointer; font-size: 11px; }
+#usage-close:hover { border-color: var(--text2); color: var(--text); }
+#usage-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.usage-section { display: flex; flex-direction: column; gap: 2px; }
+.usage-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+.usage-value { font-size: 13px; font-family: var(--mono); color: var(--text); }
+</style>
 
 <!-- Editor overlay -->
 <div id="editor-overlay">
@@ -563,7 +594,6 @@ async function launchGame(g) {
   resources = [];
 
   document.getElementById('gb-title').textContent = g.title + (g.wip ? ' [WIP]' : '');
-  showOverlay('loading', g);
   setStatus('loading', 'Preparing ' + g.title);
 
   try {
@@ -586,9 +616,33 @@ async function launchGame(g) {
       return;
     }
 
+    showOverlay('loading', g);
     const r = await fetch(normalizeDropbox(g.url));
     if (!r.ok) throw new Error("HTTP " + r.status);
-    let data = await r.arrayBuffer();
+    const totalSize = parseInt(r.headers.get('Content-Length')) || 0;
+    const sizeStr = totalSize > 0 ? formatBytes(totalSize) : '?';
+    document.getElementById('ov-body').textContent = 'Downloading ' + sizeStr + '... 0%';
+    document.getElementById('progress-wrap').style.display = 'block';
+    updateProgress(0);
+    let loaded = 0;
+    const reader = r.body.getReader();
+    const chunks = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      if (totalSize > 0) {
+        const pct = Math.round((loaded / totalSize) * 100);
+        updateProgress(pct);
+        document.getElementById('ov-body').textContent = 'Downloading ' + sizeStr + '... ' + pct + '%';
+      }
+    }
+    let data = new Uint8Array(loaded);
+    let pos = 0;
+    for (const c of chunks) { data.set(c, pos); pos += c.length; }
+    data = data.buffer;
+    document.getElementById('progress-wrap').style.display = 'none';
     
     frame = document.createElement('iframe');
     frame.id = 'game-frame';
@@ -1089,6 +1143,58 @@ document.addEventListener('fullscreenchange', () => {
 
 function reloadGame() { if (currentIdx >= 0) selectGame(currentIdx); }
 function clearCache() { indexedDB.deleteDatabase('GHubCache'); location.reload(); }
+
+function formatBytes(b) {
+  if (b === 0) return '0 B';
+  const u = ['B','KB','MB','GB']; let i = 0;
+  while (b >= 1024 && i < u.length-1) { b /= 1024; i++; }
+  return b.toFixed(i > 0 ? 1 : 0) + ' ' + u[i];
+}
+
+let usageInterval = null;
+function toggleUsage() {
+  const ov = document.getElementById('usage-overlay');
+  const active = !ov.classList.contains('active');
+  ov.classList.toggle('active', active);
+  if (active) { showUsage(); usageInterval = setInterval(refreshUsageData, 2000); }
+  else { clearInterval(usageInterval); usageInterval = null; }
+}
+function showUsage() {
+  document.getElementById('usage-overlay').classList.add('active');
+  refreshUsageData();
+  usageInterval = setInterval(refreshUsageData, 2000);
+}
+function refreshUsageData() {
+  try {
+    const mem = performance.memory || {};
+    const jsHeap = mem.usedJSHeapSize || 0;
+    const totalJS = mem.totalJSHeapSize || 0;
+    const jsLimit = mem.jsHeapSizeLimit || 0;
+    const memStr = 'JS Heap: ' + formatBytes(jsHeap) + ' / ' + formatBytes(totalJS) + ' (limit: ' + formatBytes(jsLimit) + ')';
+    document.getElementById('usage-memory').textContent = memStr;
+  } catch(e) {
+    document.getElementById('usage-memory').textContent = 'N/A (performance.memory unavailable)';
+  }
+  document.getElementById('usage-blobs').textContent = resources.length;
+  document.getElementById('usage-resources').textContent = resources.length;
+  document.getElementById('usage-games').textContent = games.length;
+  try {
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.screen.width + 'x' + window.screen.height;
+    document.getElementById('usage-display').textContent = w + ' @' + dpr + 'x';
+  } catch(e) {}
+  try {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+      document.getElementById('usage-connection').textContent = (conn.effectiveType || '?') + ' (' + formatBytes(conn.downlink * 125000) + '/s, rtt: ' + (conn.rtt || '?') + 'ms)';
+    } else {
+      document.getElementById('usage-connection').textContent = 'N/A';
+    }
+  } catch(e) {
+    document.getElementById('usage-connection').textContent = 'N/A';
+  }
+  document.getElementById('usage-ua').textContent = navigator.userAgent;
+}
 
 // Password
 function checkPassword() {
