@@ -776,6 +776,28 @@ async function launchGame(g) {
         }
       }
 
+      // Rewrite ALL CSS files in the ZIP (covers webpack dynamic chunks not linked in HTML)
+      for (const [cssPath, cssBlobUrl] of Object.entries(fm)) {
+        if (!cssPath.endsWith('.css')) continue;
+        const cssBase = cssPath.substring(0, cssPath.lastIndexOf('/') + 1);
+        try {
+          const css = await zip.files[cssPath].async('text');
+          const rewritten = css.replace(/url\(\s*(['"]?)([^'")\s]+)\1\s*\)/g, (m, q, url) => {
+            if (!url || url.startsWith('data:') || url.startsWith('blob:')) return m;
+            const resolved = /^https?:/.test(url) ? resolve(url) : resolve(cssBase + url.replace(/^\.\//, ''));
+            return resolved ? 'url("' + resolved + '")' : m;
+          });
+          if (rewritten !== css) {
+            const nb = new Blob([rewritten], { type: 'text/css' });
+            const nu = URL.createObjectURL(nb);
+            resources.push(nu);
+            fm[cssPath] = nu;
+          }
+        } catch(e) {
+          console.warn('Failed to rewrite CSS:', cssPath, e);
+        }
+      }
+
       doc.head.insertAdjacentHTML('afterbegin', getShim(fm, IS_DEBUG, entryBase));
       frame.srcdoc = doc.documentElement.outerHTML;
     } else {
@@ -931,9 +953,65 @@ function getShim(fm, dbg, entryBase) {
               });
             } catch(e){}
           }
+          if(t === 'link'){
+            try {
+              Object.defineProperty(el, 'href', {
+                get: function(){ return el.getAttribute('href'); },
+                set: function(v){
+                  if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
+                    console.log("[Shim] link href intercept", v);
+                    v = resolve(v);
+                  }
+                  el.setAttribute('href', v);
+                },
+                configurable: true, enumerable: true
+              });
+              console.log("[Shim] href desc installed on link");
+            } catch(e){
+              console.log("[Shim] href desc install failed on link", e.message);
+            }
+          }
         }
         return el;
       };
+    })();
+
+    // Body observer: catch media elements added via innerHTML/React
+    (function(){
+      if (!document.body) return;
+      var _mo2 = new MutationObserver(function(muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var nodes = muts[i].addedNodes;
+          if (!nodes) continue;
+          for (var j = 0; j < nodes.length; j++) {
+            var n = nodes[j];
+            if (!n.tagName) continue;
+            if (n.tagName === 'IMG' || n.tagName === 'AUDIO' || n.tagName === 'VIDEO' || n.tagName === 'SOURCE') {
+              var a = n.hasAttribute('src') ? 'src' : null;
+              if (!a) continue;
+              var v = n.getAttribute(a);
+              if (v && !v.startsWith('blob:') && !v.startsWith('data:') && !v.includes('://')) {
+                var r = resolve(v);
+                if (r !== v) { log("body observer fix", n.tagName, v); n.setAttribute(a, r); }
+              }
+            }
+            if (n.querySelectorAll) {
+              var subs = n.querySelectorAll('img, audio, video, source');
+              for (var k = 0; k < subs.length; k++) {
+                var el = subs[k];
+                var a = el.hasAttribute('src') ? 'src' : null;
+                if (!a) continue;
+                var v = el.getAttribute(a);
+                if (v && !v.startsWith('blob:') && !v.startsWith('data:') && !v.includes('://')) {
+                  var r = resolve(v);
+                  if (r !== v) { log("body observer subfix", el.tagName, v); el.setAttribute(a, r); }
+                }
+              }
+            }
+          }
+        }
+      });
+      _mo2.observe(document.body, {childList:true, subtree:true});
     })();
 
     var OU = window.URL;
@@ -976,6 +1054,15 @@ function getShim(fm, dbg, entryBase) {
             if (a && !a.startsWith("blob:") && !a.startsWith("data:")) {
               var r = resolve(a);
               if (r && r !== a) try { c.src = r; } catch(e) {}
+            }
+          }
+        } else if (c && c.tagName === "LINK" && (c.rel || '').indexOf('stylesheet') >= 0) {
+          var h = c.getAttribute('href');
+          if (h && !h.startsWith('blob:') && !h.startsWith('data:') && !h.includes('://')) {
+            var r = resolve(h);
+            if (r && r !== h) {
+              log("appendChild LINK stylesheet", h, "->", r.substring(0,60));
+              c.setAttribute('href', r);
             }
           }
         }
@@ -1088,6 +1175,18 @@ function getShim(fm, dbg, entryBase) {
       navigator.serviceWorker.ready = new Promise(function(r) { r({active:null}); });
     }
 
+    // Override history.pushState/replaceState to prevent SecurityError from srcdoc
+    try {
+      var _hp = history.pushState.bind(history);
+      var _hr = history.replaceState.bind(history);
+      history.pushState = function(d, t, u) {
+        try { return _hp(d, t, u); } catch(e) { try { return _hp(d, t, null); } catch(e2) {} }
+      };
+      history.replaceState = function(d, t, u) {
+        try { return _hr(d, t, u); } catch(e) { try { return _hr(d, t, null); } catch(e2) {} }
+      };
+    } catch(e) {}
+    
     try {
       var loc = {
         href: origin + "index.html",
