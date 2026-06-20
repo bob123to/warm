@@ -900,7 +900,7 @@ function getShim(fm, dbg, entryBase) {
       }
     })();
 
-    // Instance-level src property interception on created elements
+      // Instance-level src property interception on created elements
     (function(){
       console.log("[Shim] wrapping document.createElement");
       var OCE = document.createElement.bind(document);
@@ -909,76 +909,121 @@ function getShim(fm, dbg, entryBase) {
         var t = tag.toLowerCase();
         if(t === 'img' || t === 'audio' || t === 'video' || t === 'source' || t === 'link'){
           console.log("[Shim] createElement", t, "installing hooks");
-          // Override setAttribute for el.setAttribute('src/href',...) - works for all media types
+          installMediaHooks(el, t);
+        }
+        return el;
+      };
+      // Also wrap createElementNS for SVG image elements (Blockly uses this)
+      var OCE_NS = document.createElementNS.bind(document);
+      document.createElementNS = function(ns, tag, opts) {
+        var el = OCE_NS(ns, tag, opts);
+        if (ns === 'http://www.w3.org/2000/svg' && tag.toLowerCase() === 'image') {
+          console.log("[Shim] createElementNS svg:image installing hooks");
+          // SVG <image> elements use href/xlink:href, not src
           var _setAttr = el.setAttribute.bind(el);
           el.setAttribute = function(attr, val) {
             if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
-              if (attr === 'src' || attr === 'href') {
+              if (attr === 'href' || attr === 'xlink:href') {
                 _setAttr(attr, resolve(val));
                 return;
               }
             }
             _setAttr(attr, val);
           };
-          // Instance-level src property for IMG (delete+redefine to invoke native setter)
-          // and AUDIO/VIDEO (keep accessor active, set attribute directly)
-          if(t === 'img'){
-            try {
-              Object.defineProperty(el, 'src', {
-                get: function(){ return el.getAttribute ? el.getAttribute('src') : null; },
-                set: function(v){
-                  if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
-                    console.log("[Shim] instance src intercept", 'IMG', "=", v);
-                    v = resolve(v);
-                  }
-                  el.setAttribute('src', v);
-                },
-                configurable: true, enumerable: true
-              });
-              console.log("[Shim] src desc installed on img");
-            } catch(e){
-              console.log("[Shim] src desc install failed on img", e.message);
-            }
-          } else if(t === 'audio' || t === 'video'){
-            try {
-              Object.defineProperty(el, 'src', {
-                get: function(){ return el.getAttribute('src'); },
-                set: function(v){
-                  if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
-                    v = resolve(v);
-                  }
-                  el.setAttribute('src', v);
-                },
-                configurable: true, enumerable: true
-              });
-            } catch(e){}
-          }
-          if(t === 'link'){
-            try {
-              Object.defineProperty(el, 'href', {
-                get: function(){ return el.getAttribute('href'); },
-                set: function(v){
-                  if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
-                    console.log("[Shim] link href intercept", v);
-                    v = resolve(v);
-                  }
-                  el.setAttribute('href', v);
-                },
-                configurable: true, enumerable: true
-              });
-              console.log("[Shim] href desc installed on link");
-            } catch(e){
-              console.log("[Shim] href desc install failed on link", e.message);
-            }
+          try {
+            Object.defineProperty(el, 'href', {
+              get: function(){ return el.getAttribute ? el.getAttribute('href') : null; },
+              set: function(v){
+                if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
+                  console.log("[Shim] svg:image href intercept", v);
+                  v = resolve(v);
+                }
+                el.setAttribute('href', v);
+              },
+              configurable: true, enumerable: true
+            });
+          } catch(e){
+            console.log("[Shim] svg:image href desc failed", e.message);
           }
         }
         return el;
       };
+      function installMediaHooks(el, tag) {
+        // Override setAttribute for el.setAttribute('src/href',...) - works for all media types
+        var _setAttr = el.setAttribute.bind(el);
+        el.setAttribute = function(attr, val) {
+          if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
+            if (attr === 'src' || attr === 'href') {
+              _setAttr(attr, resolve(val));
+              return;
+            }
+          }
+          _setAttr(attr, val);
+        };
+        // Instance-level src property for IMG (delete+redefine to invoke native setter)
+        // and AUDIO/VIDEO (keep accessor active, set attribute directly)
+        if(tag === 'img'){
+          try {
+            Object.defineProperty(el, 'src', {
+              get: function(){ return el.getAttribute ? el.getAttribute('src') : null; },
+              set: function(v){
+                if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
+                  console.log("[Shim] instance src intercept", 'IMG', "=", v);
+                  v = resolve(v);
+                }
+                el.setAttribute('src', v);
+              },
+              configurable: true, enumerable: true
+            });
+            console.log("[Shim] src desc installed on img");
+          } catch(e){
+            console.log("[Shim] src desc install failed on img", e.message);
+          }
+        } else if(tag === 'audio' || tag === 'video'){
+          try {
+            Object.defineProperty(el, 'src', {
+              get: function(){ return el.getAttribute('src'); },
+              set: function(v){
+                if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
+                  v = resolve(v);
+                }
+                el.setAttribute('src', v);
+              },
+              configurable: true, enumerable: true
+            });
+          } catch(e){}
+        }
+        if(tag === 'link'){
+          try {
+            Object.defineProperty(el, 'href', {
+              get: function(){ return el.getAttribute('href'); },
+              set: function(v){
+                if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
+                  console.log("[Shim] link href intercept", v);
+                  v = resolve(v);
+                }
+                el.setAttribute('href', v);
+              },
+              configurable: true, enumerable: true
+            });
+            console.log("[Shim] href desc installed on link");
+          } catch(e){
+            console.log("[Shim] href desc install failed on link", e.message);
+          }
+        }
+      }
     })();
 
     // Body observer: catch media elements added via innerHTML/React
     (function(){
       if (!document.body) return;
+      function fixAttr(el, attr){
+        var v = el.getAttribute(attr);
+        if (v && !v.startsWith('blob:') && !v.startsWith('data:') && !v.includes('://')) {
+          var r = resolve(v);
+          if (r !== v) { log("body observer fix", el.tagName, v); el.setAttribute(attr, r); }
+        }
+      }
       var _mo2 = new MutationObserver(function(muts) {
         for (var i = 0; i < muts.length; i++) {
           var nodes = muts[i].addedNodes;
@@ -987,24 +1032,20 @@ function getShim(fm, dbg, entryBase) {
             var n = nodes[j];
             if (!n.tagName) continue;
             if (n.tagName === 'IMG' || n.tagName === 'AUDIO' || n.tagName === 'VIDEO' || n.tagName === 'SOURCE') {
-              var a = n.hasAttribute('src') ? 'src' : null;
-              if (!a) continue;
-              var v = n.getAttribute(a);
-              if (v && !v.startsWith('blob:') && !v.startsWith('data:') && !v.includes('://')) {
-                var r = resolve(v);
-                if (r !== v) { log("body observer fix", n.tagName, v); n.setAttribute(a, r); }
-              }
+              if (n.hasAttribute('src')) fixAttr(n, 'src');
+            } else if (n.namespaceURI === 'http://www.w3.org/2000/svg' && n.tagName === 'image') {
+              if (n.hasAttribute('href')) fixAttr(n, 'href');
+              if (n.hasAttribute('xlink:href')) fixAttr(n, 'xlink:href');
             }
             if (n.querySelectorAll) {
-              var subs = n.querySelectorAll('img, audio, video, source');
+              var subs = n.querySelectorAll('img, audio, video, source, image');
               for (var k = 0; k < subs.length; k++) {
                 var el = subs[k];
-                var a = el.hasAttribute('src') ? 'src' : null;
-                if (!a) continue;
-                var v = el.getAttribute(a);
-                if (v && !v.startsWith('blob:') && !v.startsWith('data:') && !v.includes('://')) {
-                  var r = resolve(v);
-                  if (r !== v) { log("body observer subfix", el.tagName, v); el.setAttribute(a, r); }
+                if (el.tagName === 'image' && el.namespaceURI === 'http://www.w3.org/2000/svg') {
+                  if (el.hasAttribute('href')) fixAttr(el, 'href');
+                  if (el.hasAttribute('xlink:href')) fixAttr(el, 'xlink:href');
+                } else {
+                  if (el.hasAttribute('src')) fixAttr(el, 'src');
                 }
               }
             }
