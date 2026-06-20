@@ -680,6 +680,20 @@ async function launchGame(g) {
     data = data.buffer;
     document.getElementById('progress-wrap').style.display = 'none';
     
+    // PostMessage proxy for external resource fetching (extensions.turbowarp.org, etc.)
+    var _proxyHandler = function(e) {
+      if (e.data && e.data.type === 'fetch-proxy') {
+        fetch(e.data.url).then(function(r) { return r.blob(); }).then(function(blob) {
+          var url = URL.createObjectURL(blob);
+          resources.push(url);
+          e.source.postMessage({type: 'fetch-proxy-response', id: e.data.id, url: url}, '*');
+        }).catch(function(err) {
+          e.source.postMessage({type: 'fetch-proxy-response', id: e.data.id, error: err.message}, '*');
+        });
+      }
+    };
+    window.addEventListener('message', _proxyHandler);
+
     frame = document.createElement('iframe');
     frame.id = 'game-frame';
     frame.sandbox = "allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals allow-popups allow-downloads";
@@ -928,10 +942,24 @@ function getShim(fm, dbg, entryBase) {
         if (ns === 'http://www.w3.org/2000/svg' && tag.toLowerCase() === 'image') {
           console.log("[Shim] createElementNS svg:image installing hooks");
           // SVG <image> elements use href/xlink:href, not src
+          var _proxyExt = function(el, val) {
+            if (isExternal(val)) {
+              var _el = el;
+              proxyFetch('https://' + val).then(function(blobUrl) {
+                try{ _el.setAttribute('href', blobUrl); }catch(e){}
+              }).catch(function(err) {
+                log("svg img proxy failed, resolving:", val, err.message);
+                try{ _el.setAttribute('href', resolve(val)); }catch(e){}
+              });
+              return true;
+            }
+            return false;
+          };
           var _setAttr = el.setAttribute.bind(el);
           el.setAttribute = function(attr, val) {
-            if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
+            if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:')) {
               if (attr === 'href' || attr === 'xlink:href') {
+                if (!val.includes('://') && _proxyExt(this, val)) return;
                 _setAttr(attr, resolve(val));
                 return;
               }
@@ -941,8 +969,9 @@ function getShim(fm, dbg, entryBase) {
           // Blockly uses setAttributeNS for xlink:href
           var _setAttrNS = el.setAttributeNS.bind(el);
           el.setAttributeNS = function(ns, attr, val) {
-            if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
+            if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:')) {
               if (attr === 'href' || attr === 'xlink:href') {
+                if (!val.includes('://') && _proxyExt(this, val)) return;
                 _setAttrNS(ns, attr, resolve(val));
                 return;
               }
@@ -955,6 +984,16 @@ function getShim(fm, dbg, entryBase) {
               set: function(v){
                 if(v && typeof v==="string" && !v.startsWith("blob:") && !v.startsWith("data:") && !v.includes("://")){
                   console.log("[Shim] svg:image href intercept", v);
+                  if (isExternal(v)) {
+                    var _el = this;
+                    proxyFetch('https://' + v).then(function(blobUrl) {
+                      try{ _el.setAttribute('href', blobUrl); }catch(e){}
+                    }).catch(function(err) {
+                      log("svg img href proxy failed:", v, err.message);
+                      try{ _el.setAttribute('href', resolve(v)); }catch(e){}
+                    });
+                    return;
+                  }
                   v = resolve(v);
                 }
                 el.setAttribute('href', v);
@@ -1104,7 +1143,20 @@ function getShim(fm, dbg, entryBase) {
         var OSAN = SVGElement.prototype.setAttributeNS;
         SVGElement.prototype.setAttributeNS = function(ns, attr, val) {
           if (val && typeof val === 'string' && (attr === 'href' || attr === 'xlink:href') &&
-              !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
+              !val.startsWith('blob:') && !val.startsWith('data:')) {
+            if (val.includes('://')) return OSAN.apply(this, arguments); // already absolute
+            // Check if external hostname
+            if (isExternal(val)) {
+              log("svg proto setAttributeNS external, proxying:", val);
+              var el = this;
+              proxyFetch('https://' + val).then(function(blobUrl) {
+                OSAN.call(el, ns, attr, blobUrl);
+              }).catch(function(err) {
+                log("svg proxy failed, trying resolve:", val, err.message);
+                OSAN.call(el, ns, attr, resolve(val));
+              });
+              return;
+            }
             log("svg proto setAttributeNS", attr, val);
             return OSAN.call(this, ns, attr, resolve(val));
           }
@@ -1133,7 +1185,42 @@ function getShim(fm, dbg, entryBase) {
       },
       get: function(T, p) { return typeof T[p]==="function" ? T[p].bind(T) : T[p]; }
     });
-    var OF=window.fetch; window.fetch=function(i,n){ var u=(typeof i==="string"?i:(i&&i.url?i.url:i)); var r=resolve(u); return OF(r!==u?r:i,n); };
+    // Proxy fetch for external URLs via parent postMessage (about:srcdoc can't load cross-origin)
+    var proxyFetch = function(url) {
+      return new Promise(function(r, j) {
+        var id = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+        var handler = function(e) {
+          if (e.data && e.data.type === 'fetch-proxy-response' && e.data.id === id) {
+            window.removeEventListener('message', handler);
+            if (e.data.error) j(new Error(e.data.error));
+            else r(e.data.url);
+          }
+        };
+        window.addEventListener('message', handler);
+        window.parent.postMessage({type: 'fetch-proxy', id: id, url: url}, '*');
+        setTimeout(function(){ window.removeEventListener('message', handler); j(new Error('proxy timeout')); }, 15000);
+      });
+    };
+    var isExternal = function(u) {
+      if (!u || typeof u !== 'string') return false;
+      if (u.startsWith('blob:') || u.startsWith('data:')) return false;
+      if (u.startsWith('https://')) return !u.startsWith(origin);
+      if (u.startsWith('http://')) return !u.startsWith(origin);
+      // Check for hostname-style paths (e.g. extensions.turbowarp.org/path)
+      var firstSlash = u.indexOf('/');
+      if (firstSlash > 0) {
+        var seg = u.substring(0, firstSlash);
+        return seg.indexOf('.') > 0 && !seg.startsWith('.');
+      }
+      return false;
+    };
+    var OF=window.fetch; window.fetch=function(i,n){
+      var u=(typeof i==="string"?i:(i&&i.url?i.url:i));
+      var r=resolve(u);
+      if (r !== u) return OF(r||u,n);
+      if (isExternal(u)) return proxyFetch(u);
+      return OF(u,n);
+    };
     var OX=XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open=function(m,u){ return OX.apply(this,[m,resolve(u)].concat([].slice.call(arguments,2))); };
     var OW = window.Worker; window.Worker = class extends OW { constructor(u,o){ super(resolve(u),o); } };
     
@@ -1151,6 +1238,18 @@ function getShim(fm, dbg, entryBase) {
           if (c.src && !c.src.startsWith("blob:")) {
             var a = c.getAttribute("src");
             if (a && !a.startsWith("blob:") && !a.startsWith("data:")) {
+              if (isExternal(a)) {
+                log("appendChild SCRIPT external, proxying:", a);
+                c.removeAttribute('src'); // Prevent browser from loading failing URL
+                AP.call(this, c); // Append to DOM (script won't load without src)
+                proxyFetch(a).then(function(blobUrl) {
+                  log("appendChild SCRIPT proxy got blob for:", a);
+                  try{ c.src = blobUrl; }catch(e){}
+                }).catch(function(err) {
+                  console.warn("[Shim] SCRIPT proxy failed:", a, err.message);
+                });
+                return;
+              }
               var r = resolve(a);
               if (r && r !== a) try { c.src = r; } catch(e) {}
             }
