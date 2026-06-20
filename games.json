@@ -55,7 +55,23 @@
     "icon": "thumbnails/minecraft-1-8.png",
     "group": "Minecraft",
     "variant": "1.8 Eagler",
-    "size": 15133433
+    "size": 15133433,
+    "addons": [
+      {
+        "name": "Faithful 32x",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/eradw7p52vt4kxk80wtms/Faithful-32x-1.12.2.zip?rlkey=vc7auow3sgwdvztchr6i2o3qt",
+        "size": 3934639,
+        "desc": "Faithful 32x32 resource pack",
+        "group": "Resource Packs"
+      },
+      {
+        "name": "Dramatic Skys",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/46ourva9z92cten0100xk/Dramatic-Skys-Demo-1.5.3.36.4.zip?rlkey=x7a9nom2o6gdi5m6q9v9ysn3r",
+        "size": 13912171,
+        "desc": "Dramatic Skys sky texture pack",
+        "group": "Resource Packs"
+      }
+    ]
   },
   {
     "title": "Minecraft 1.12.2",
@@ -64,7 +80,23 @@
     "icon": "thumbnails/minecraft-1-12-2.png",
     "group": "Minecraft",
     "variant": "1.12.2 Eagler",
-    "size": 20103718
+    "size": 20103718,
+    "addons": [
+      {
+        "name": "Faithful 32x",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/eradw7p52vt4kxk80wtms/Faithful-32x-1.12.2.zip?rlkey=vc7auow3sgwdvztchr6i2o3qt",
+        "size": 3934639,
+        "desc": "Faithful 32x32 resource pack",
+        "group": "Resource Packs"
+      },
+      {
+        "name": "Dramatic Skys",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/46ourva9z92cten0100xk/Dramatic-Skys-Demo-1.5.3.36.4.zip?rlkey=x7a9nom2o6gdi5m6q9v9ysn3r",
+        "size": 13912171,
+        "desc": "Dramatic Skys sky texture pack",
+        "group": "Resource Packs"
+      }
+    ]
   },
   {
     "title": "Paper Minecraft",
@@ -73,7 +105,23 @@
     "icon": "thumbnails/paper-minecraft.png",
     "group": "Minecraft",
     "variant": "Paper",
-    "size": 6211171
+    "size": 6211171,
+    "addons": [
+      {
+        "name": "Faithful 32x",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/eradw7p52vt4kxk80wtms/Faithful-32x-1.12.2.zip?rlkey=vc7auow3sgwdvztchr6i2o3qt",
+        "size": 3934639,
+        "desc": "Faithful 32x32 resource pack",
+        "group": "Resource Packs"
+      },
+      {
+        "name": "Dramatic Skys",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/46ourva9z92cten0100xk/Dramatic-Skys-Demo-1.5.3.36.4.zip?rlkey=x7a9nom2o6gdi5m6q9v9ysn3r",
+        "size": 13912171,
+        "desc": "Dramatic Skys sky texture pack",
+        "group": "Resource Packs"
+      }
+    ]
   },
   {
     "title": "Slope 3D",
