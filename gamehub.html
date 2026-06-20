@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.2 · e4e2f73+ · 2026-06-20 21:35</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.3 · 184cce6+ · 2026-06-20 21:40</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -861,6 +861,31 @@ function getShim(fm, dbg, entryBase) {
     function log(){ if(debug) try{ console.log.apply(console, ["[Shim]"].concat([].slice.call(arguments))); }catch(e){} }
     console.log("[Shim] init start debug=" + debug + " origin=" + window.origin + " parentOrigin=" + (window.parent ? window.parent.origin : 'none'));
     var entryBase="${entryBase || ''}";
+    // Bypass CrazyGames sitelock (checks hostname for 'crazygames' or 'localhost')
+    (function(){
+      try {
+        Object.defineProperty(window.location, 'hostname', {
+          get: function(){ return 'localhost'; },
+          configurable: true
+        });
+        log("hostname override installed (direct)");
+      } catch(e) {
+        try {
+          Object.defineProperty(Location.prototype, 'hostname', {
+            get: function(){ return 'localhost'; },
+            configurable: true
+          });
+          log("hostname override installed (prototype)");
+        } catch(e2) {
+          log("hostname override failed, using Array.indexOf fallback");
+          var _oi = Array.prototype.indexOf;
+          Array.prototype.indexOf = function(v) {
+            if (v === 'crazygames') return this.length > 0 ? this.length - 1 : 0;
+            return _oi.apply(this, arguments);
+          };
+        }
+      }
+    })();
     function resolve(s){
       if(!s || typeof s!=="string" || s.startsWith("blob:") || s.startsWith("data:")) return s;
       if(s.startsWith("http://")) return "https://" + s.slice(7);
