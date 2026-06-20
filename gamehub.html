@@ -1270,6 +1270,15 @@ function getShim(fm, dbg, entryBase) {
               c.setAttribute('href', r);
             }
           }
+        } else if (c && (c.tagName === "IMG" || c.tagName === "AUDIO" || c.tagName === "VIDEO" || c.tagName === "SOURCE")) {
+          var a = c.getAttribute('src');
+          if (a && !a.startsWith('blob:') && !a.startsWith('data:') && !a.includes('://')) {
+            var r = resolve(a);
+            if (r && r !== a) {
+              log("appendChild media", c.tagName, a);
+              try{ c.src = r; }catch(e){ try{ c.setAttribute('src', r); }catch(e2){} }
+            }
+          }
         }
         return AP.call(this, c);
       };
