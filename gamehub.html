@@ -39,14 +39,6 @@
   .gi-variant-item { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 44px; cursor: pointer; border-left: 2px solid transparent; position: relative; transition: transform .2s ease, box-shadow .2s ease, filter .2s ease, opacity .2s ease, border-left-color .2s ease, background .15s ease; }
   .gi-variant-item:hover { background: var(--bg2); }
   .gi-variant-item.active { background: var(--bg2); border-left-color: var(--blue); }
-
-  /* Modern theme: hover glow/grow, active shift, blur siblings */
-  :root.theme-modern .game-item:hover { transform: scale(1.04); box-shadow: 0 0 16px var(--blue-dim); z-index: 2; }
-  :root.theme-modern .game-item.active { transform: translateX(4px); }
-  :root.theme-modern .gi-variant-item:hover { transform: scale(1.04); box-shadow: 0 0 16px var(--blue-dim); z-index: 2; }
-  :root.theme-modern .gi-variant-item.active { transform: translateX(4px); }
-  :root.theme-modern #game-list:hover .game-item:not(:hover):not(.locked),
-  :root.theme-modern #game-list:hover .gi-variant-item:not(:hover) { filter: blur(.75px); opacity: .6; }
   .gi-icon { width: 28px; height: 28px; background: var(--bg3); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 15px; overflow: hidden; flex-shrink: 0; }
   .gi-icon img { width: 100%; height: 100%; object-fit: cover; }
   .gi-meta { min-width: 0; flex: 1; overflow: hidden; }
@@ -241,7 +233,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><button id="theme-btn" class="tb-btn" onclick="toggleTheme()" title="Toggle theme" style="height:18px;padding:0 6px;font-size:10px;margin-right:4px;">&#x1F3A8;</button><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.5.2 · a9ddf8a+ · 2026-06-20 22:30</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.5.3 · c6223ff+ · 2026-06-20 22:35</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -2657,36 +2649,6 @@ function formatSize(bytes) {
   let size = bytes;
   while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
   return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
-}
-
-// Theme toggle: classic menu (0) vs modern blue (1) / purple (2) / orange (3)
-var currentTheme = 0;
-function toggleTheme() {
-  currentTheme = (currentTheme + 1) % 4;
-  var root = document.documentElement;
-  var btn = document.getElementById('theme-btn');
-  if (currentTheme === 0) {
-    root.classList.remove('theme-modern');
-    root.style.setProperty('--blue', '#4a90d9');
-    root.style.setProperty('--blue-dim', '#2a4f7a');
-    btn.textContent = '\u25A0'; // ■ classic
-  } else if (currentTheme === 1) {
-    root.classList.add('theme-modern');
-    root.style.setProperty('--blue', '#4a90d9');
-    root.style.setProperty('--blue-dim', '#2a4f7a');
-    btn.textContent = '\u25A0'; // ■ blue modern
-  } else if (currentTheme === 2) {
-    root.classList.add('theme-modern');
-    root.style.setProperty('--blue', '#b87ae0');
-    root.style.setProperty('--blue-dim', '#5e3a7a');
-    btn.textContent = '\u25A0'; // ■ purple modern
-  } else {
-    root.classList.add('theme-modern');
-    root.style.setProperty('--blue', '#e07a5a');
-    root.style.setProperty('--blue-dim', '#7a4a3a');
-    btn.textContent = '\u25A0'; // ■ orange modern
-  }
-  playNavSound(0.3, 120, 'sine');
 }
 
 // Web Audio nav sound
