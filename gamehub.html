@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.0 · f23c71e · 2026-06-20 20:35</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.1 · 51a2d62+ · 2026-06-20 21:00</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -1282,6 +1282,25 @@ function getShim(fm, dbg, entryBase) {
         }
         return AP.call(this, c);
       };
+    })();
+
+    // Self-debug: capture-phase error listener retries any failed resource load with resolved URL
+    (function(){
+      document.addEventListener('error', function(e) {
+        var el = e.target;
+        if (!el || !el.tagName) return;
+        var tag = el.tagName;
+        // SVG image elements use href, not src
+        var attr = (tag === 'LINK' || (tag === 'image' && el.namespaceURI === 'http://www.w3.org/2000/svg')) ? 'href' : 'src';
+        var url = el.getAttribute ? el.getAttribute(attr) : null;
+        if (url && !url.startsWith('blob:') && !url.startsWith('data:')) {
+          var r = resolve(url);
+          if (r && r !== url) {
+            log("error retry", tag, url.substring(0,60), "->", r.substring(0,60));
+            try{ if(attr === 'href') el.setAttribute('href', r); else el.src = r; }catch(e2){}
+          }
+        }
+      }, true);
     })();
 
     // Rewrite CSS url() in dynamically added styles
