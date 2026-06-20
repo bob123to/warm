@@ -202,5 +202,12 @@
     "tag": "Puzzle",
     "type": "zip",
     "icon": "thumbnails/hextris.png"
+  },
+  {
+    "title": "Bendy",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/odmscos9vtgc3dj7fae85/bendy.zip?rlkey=2a6x3e6aprguokppokch7azg7",
+    "tag": "Horror",
+    "type": "zip",
+    "icon": "thumbnails/bendy.png"
   }
 ]
