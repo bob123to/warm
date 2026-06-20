@@ -5,7 +5,8 @@
     "tag": "Platformer",
     "icon": "thumbnails/subway-surfers.png",
     "group": "subway-surfers",
-    "variant": "San Francisco"
+    "variant": "San Francisco",
+    "size": 74198618
   },
   {
     "title": "Subway Surfers",
@@ -13,7 +14,8 @@
     "tag": "Platformer",
     "icon": "thumbnails/subway-surfers.png",
     "group": "subway-surfers",
-    "variant": "Shavana"
+    "variant": "Shavana",
+    "size": 35386314
   },
   {
     "title": "Subway Surfers",
@@ -21,26 +23,30 @@
     "tag": "Platformer",
     "icon": "thumbnails/subway-surfers.png",
     "group": "subway-surfers",
-    "variant": "Beijing"
+    "variant": "Beijing",
+    "size": 36793693
   },
   {
     "title": "Ultrakill",
     "url": "https://dl.dropboxusercontent.com/scl/fi/75px8ozbd8nzx0kqw7uuk/ultrakill.zip?rlkey=gjgay5ejdjzs79rj73ctyis8i&st=bdty2whc",
     "tag": "Fps",
     "type": "zip",
-    "icon": "thumbnails/ultrakill.png"
+    "icon": "thumbnails/ultrakill.png",
+    "size": 65922230
   },
   {
     "title": "Buckshot roulette",
     "url": "https://dl.dropboxusercontent.com/scl/fi/0pj6tx7kqf0ek69omodeh/buckshot.zip?rlkey=1pgdxccbt15r4sqswe4oj7eos&st=2fp9rg3p",
     "type": "zip",
     "icon": "thumbnails/buckshot-roulette.png",
-    "wip": true
+    "wip": true,
+    "size": 247449150
   },
   {
     "title": "Truck driving",
     "url": "https://dl.dropboxusercontent.com/scl/fi/gqqnj4umxxw5zq8hn8fbt/Truck-Driving-Challenge.html?rlkey=tlqn367r2k0tmmgfi0ux2nvl8&st=y3z5myc9",
-    "icon": "thumbnails/truck-driving.png"
+    "icon": "thumbnails/truck-driving.png",
+    "size": 67786370
   },
   {
     "title": "Minecraft 1.8",
@@ -48,7 +54,8 @@
     "tag": "Minecraft",
     "icon": "thumbnails/minecraft-1-8.png",
     "group": "Minecraft",
-    "variant": "1.8 Eagler"
+    "variant": "1.8 Eagler",
+    "size": 15133433
   },
   {
     "title": "Minecraft 1.12.2",
@@ -56,7 +63,8 @@
     "tag": "Minecraft",
     "icon": "thumbnails/minecraft-1-12-2.png",
     "group": "Minecraft",
-    "variant": "1.12.2 Eagler"
+    "variant": "1.12.2 Eagler",
+    "size": 20103718
   },
   {
     "title": "Paper Minecraft",
@@ -64,60 +72,69 @@
     "tag": "Minecraft",
     "icon": "thumbnails/paper-minecraft.png",
     "group": "Minecraft",
-    "variant": "Paper"
+    "variant": "Paper",
+    "size": 6211171
   },
   {
     "title": "Slope 3D",
     "url": "https://dl.dropboxusercontent.com/scl/fi/9qb1jyzsght9g5y65q8zz/slope3d.html?rlkey=4dagmkqfi665uykzf86bkzq2y&st=rq9l8tbk",
     "tag": "Platformer",
-    "icon": "thumbnails/slope-3d.jpg"
+    "icon": "thumbnails/slope-3d.jpg",
+    "size": 26738100
   },
   {
     "title": "Downgrade 2",
     "url": "https://www.dropbox.com/scl/fi/ajudjdbr9tlkq5ra951n5/DOWNGRADE-2-Online-Shooter-Cloud-PvP-DG2-v1.7.7.7.html?rlkey=zhjeaclgqf36xaeh38do6hfwa&dl=0",
     "tag": "Fps",
-    "icon": "thumbnails/downgrade-2.png"
+    "icon": "thumbnails/downgrade-2.png",
+    "size": 9180472
   },
   {
     "title": "Friday Night Funkin",
     "url": "https://www.dropbox.com/scl/fi/wtgm5nvvo3nhcg2w067p0/fnf.html?rlkey=i61fd2m8b9v0h2y82k000pxsh&dl=0",
     "tag": "Rhythm",
     "icon": "thumbnails/friday-night-funkin.png",
-    "wip": true
+    "wip": true,
+    "size": 12424
   },
   {
     "title": "Tap Road",
     "url": "https://www.dropbox.com/scl/fi/wl2p7vwhm2uai7gieidk9/taproad.zip?rlkey=6nawchqg7o7tzzutfvtlfhtpn&dl=0",
     "tag": "Arcade",
     "type": "zip",
-    "icon": "thumbnails/tap-road.png"
+    "icon": "thumbnails/tap-road.png",
+    "size": 33850375
   },
   {
     "title": "Crossy Road",
     "url": "https://dl.dropboxusercontent.com/scl/fi/avk8ozq7eoxq6vmwzh8ll/crossyroad.zip?rlkey=jfm9acva5y9tzn037f89mascs",
     "tag": "Arcade",
     "type": "zip",
-    "icon": "thumbnails/crossy-road.png"
+    "icon": "thumbnails/crossy-road.png",
+    "size": 3577193
   },
   {
     "title": "Five Nights at Epstein",
     "url": "https://dl.dropboxusercontent.com/scl/fi/0flym3r4qx90p4uab8ejg/five-nights-at-epstein.html?rlkey=f12dxc38twtorv79ig2n80tzx&dl=0",
     "tag": "General",
-    "icon": "thumbnails/five-nights-at-epstein.png"
+    "icon": "thumbnails/five-nights-at-epstein.png",
+    "locked": true
   },
   {
     "title": "Stack",
     "url": "https://dl.dropboxusercontent.com/scl/fi/butytmtw8a995ufztb31g/stack.zip?rlkey=rp44dthl756dpmzpzcc8ybmcx",
     "tag": "Arcade",
     "type": "zip",
-    "icon": "thumbnails/stack.png"
+    "icon": "thumbnails/stack.png",
+    "size": 318859
   },
   {
     "title": "World's Hardest Game",
     "url": "https://dl.dropboxusercontent.com/scl/fi/576ov4v3znbvk9c4r4xnc/worlds-hardest-game.zip?rlkey=0571qx1s4obd2t4rbsfwb787o",
     "tag": "Puzzle",
     "type": "zip",
-    "icon": "thumbnails/world-s-hardest-game.png"
+    "icon": "thumbnails/world-s-hardest-game.png",
+    "size": 5624492
   },
   {
     "title": "Slither Snake",
@@ -125,27 +142,31 @@
     "tag": "Snake",
     "type": "zip",
     "icon": "thumbnails/slither-snake.png",
-    "wip": true
+    "wip": true,
+    "size": 6695490
   },
   {
     "title": "Getting Over It",
     "url": "https://dl.dropboxusercontent.com/scl/fi/hdi2w2o0loebfqc92b6pc/Getting-Over-It-v1.4.html?rlkey=7dsm51ivk2ui577028zz99h20&dl=0",
     "tag": "Platformer",
-    "icon": "thumbnails/getting-over-it.png"
+    "icon": "thumbnails/getting-over-it.png",
+    "size": 35626893
   },
   {
     "title": "Fruit Ninja",
     "url": "https://dl.dropboxusercontent.com/scl/fi/ijylylufiji71zgbos135/fruit-ninja.zip?rlkey=m9jna5f6b88b7hsadng1dyeql",
     "tag": "Arcade",
     "type": "zip",
-    "icon": "thumbnails/fruit-ninja.png"
+    "icon": "thumbnails/fruit-ninja.png",
+    "size": 11030087
   },
   {
     "title": "Tomb of the Mask",
     "url": "https://dl.dropboxusercontent.com/scl/fi/w2pnutkaxsq5asjov9jz3/totm.zip?rlkey=f8eunfg1a439mq48f67kau0ne",
     "tag": "Arcade",
     "type": "zip",
-    "icon": "thumbnails/tomb-of-the-mask.png"
+    "icon": "thumbnails/tomb-of-the-mask.png",
+    "size": 15333598
   },
   {
     "title": "Traffic Rider",
@@ -153,40 +174,46 @@
     "tag": "Racing",
     "type": "zip",
     "icon": "thumbnails/traffic-rider.png",
-    "locked": true
+    "locked": true,
+    "size": 113371526
   },
   {
     "title": "Appel",
     "url": "https://dl.dropboxusercontent.com/scl/fi/9c0v5k7qrnkeu3tbpkyk5/appel.html?rlkey=67fiwaxyxvy8z32mvzdsgkwht",
     "tag": "Arcade",
-    "icon": "thumbnails/appel.png"
+    "icon": "thumbnails/appel.png",
+    "size": 16610540
   },
   {
     "title": "Nitro Racing",
     "url": "https://dl.dropboxusercontent.com/scl/fi/zq0vg3cy140v02mr0jp9o/nitro-racing.html?rlkey=8z7m8a7dh2aeadb39feh7dwuz",
     "tag": "Racing",
-    "icon": "thumbnails/nitro-racing.png"
+    "icon": "thumbnails/nitro-racing.png",
+    "size": 59312306
   },
   {
     "title": "Cookie Clicker",
     "url": "https://dl.dropboxusercontent.com/scl/fi/otzp46b2u1ts4dxqxd9fa/cookie-clicker.zip?rlkey=ba59idmrhszyao8kong6dk8af",
     "tag": "Idle",
     "type": "zip",
-    "icon": "thumbnails/cookie-clicker.png"
+    "icon": "thumbnails/cookie-clicker.png",
+    "size": 4659729
   },
   {
     "title": "Cut the Rope",
     "url": "https://dl.dropboxusercontent.com/scl/fi/p8fas90vcz1o80l60yvnu/cut-the-rope.zip?rlkey=o3yyii2jj3g1ieakzievo15mb",
     "tag": "Puzzle",
     "type": "zip",
-    "icon": "thumbnails/cut-the-rope.png"
+    "icon": "thumbnails/cut-the-rope.png",
+    "size": 11974124
   },
   {
     "title": "Hextris",
     "url": "https://dl.dropboxusercontent.com/scl/fi/tnqyg8ghhevh0ta8cldew/hextris.zip?rlkey=a9dez7mbqb3qng54df43ro7o2",
     "tag": "Puzzle",
     "type": "zip",
-    "icon": "thumbnails/hextris.png"
+    "icon": "thumbnails/hextris.png",
+    "size": 642455
   },
   {
     "title": "Bendy",
@@ -194,6 +221,7 @@
     "tag": "Horror",
     "type": "zip",
     "icon": "thumbnails/bendy.png",
-    "wip": true
+    "wip": true,
+    "size": 144539668
   }
 ]

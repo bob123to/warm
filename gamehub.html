@@ -620,9 +620,11 @@ async function launchGame(g) {
     }
 
     showOverlay('loading', g);
+    const knownSize = g.size || 0;
+    if (knownSize) document.getElementById('ov-body').textContent = 'Downloading ' + formatBytes(knownSize) + '...';
     const r = await fetch(normalizeDropbox(g.url));
     if (!r.ok) throw new Error("HTTP " + r.status);
-    const totalSize = parseInt(r.headers.get('Content-Length')) || 0;
+    const totalSize = knownSize || parseInt(r.headers.get('Content-Length')) || 0;
     const sizeStr = totalSize > 0 ? formatBytes(totalSize) : '?';
     document.getElementById('ov-body').textContent = 'Downloading ' + sizeStr + '... 0%';
     document.getElementById('progress-wrap').style.display = 'block';
