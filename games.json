@@ -215,6 +215,7 @@
     "tag": "Racing",
     "type": "zip",
     "icon": "thumbnails/traffic-rider.png",
+    "locked": true,
     "size": 113371526
   },
   {
