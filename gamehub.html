@@ -1090,6 +1090,21 @@ function getShim(fm, dbg, entryBase) {
       _mo3.observe(document.body, {childList:false, subtree:true, attributes:true, attributeFilter:['href','xlink:href','src']});
     })();
 
+    // Global SVG element hook: catch ALL setAttributeNS calls for href/xlink:href
+    (function(){
+      try {
+        var OSAN = SVGElement.prototype.setAttributeNS;
+        SVGElement.prototype.setAttributeNS = function(ns, attr, val) {
+          if (val && typeof val === 'string' && (attr === 'href' || attr === 'xlink:href') &&
+              !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
+            log("svg proto setAttributeNS", attr, val);
+            return OSAN.call(this, ns, attr, resolve(val));
+          }
+          return OSAN.apply(this, arguments);
+        };
+      } catch(e){ console.warn("[Shim] svg proto hook failed", e.message); }
+    })();
+
     var OU = window.URL;
     window.URL = new Proxy(OU, {
       construct: function(T, args) {
