@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.1 · 2256b80+ · 2026-06-20 21:10</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.1 · 34ece0e+ · 2026-06-20 21:15</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -894,19 +894,8 @@ function getShim(fm, dbg, entryBase) {
     // Intercept Audio/Image constructors (native C++ constructors bypass JS hooks)
     console.log("[Shim] installing instance hooks...");
     (function(){
-      // Override Image constructor so new Image() gets instance-level src interception
-      var OImg = window.Image;
-      if(OImg){
-        window.Image = function(w, h){
-          var el = document.createElement('img');
-          if(!isNaN(w)) try{ el.width = w; }catch(e){}
-          if(!isNaN(h)) try{ el.height = h; }catch(e){}
-          return el;
-        };
-        window.Image.prototype = OImg.prototype;
-        console.log("[Shim] Image constructor overridden");
-      }
-      // Override Audio constructor - intercepts new Audio("path") case
+      // Audio constructor override to intercept new Audio("path")
+      // (Image constructor handled by window.Image + prototype-level src below)
       var OAud = window.Audio;
       if(OAud){
         window.Audio = function(src){
@@ -1070,43 +1059,40 @@ function getShim(fm, dbg, entryBase) {
           }
         }
       }
-    })();
+    }
 
     // Override window.Image to catch new Image() (native constructor, not createElement)
-    (function(){
-      try {
-        var OrigImage = window.Image;
-        window.Image = function(w, h) {
-          var img = new OrigImage(w, h);
-          installMediaHooks(img, 'img');
-          return img;
-        };
-        window.Image.prototype = OrigImage.prototype;
-        log("window.Image override installed");
-      } catch(e){ log("window.Image override failed", e.message); }
-    })();
+    try {
+      var OrigImage = window.Image;
+      window.Image = function(w, h) {
+        var img = new OrigImage(w, h);
+        installMediaHooks(img, 'img');
+        return img;
+      };
+      window.Image.prototype = OrigImage.prototype;
+      log("window.Image override installed");
+    } catch(e){ log("window.Image override failed", e.message); }
 
     // Prototype-level src interception as ultimate safety net for ALL img/audio/video elements
-    (function(){
-      ['HTMLImageElement', 'HTMLAudioElement', 'HTMLVideoElement'].forEach(function(cname) {
-        try {
-          var proto = window[cname].prototype;
-          var origDesc = Object.getOwnPropertyDescriptor(proto, 'src');
-          if (origDesc && origDesc.configurable) {
-            Object.defineProperty(proto, 'src', {
-              get: origDesc.get,
-              set: function(v) {
-                if (v && typeof v === 'string' && !v.startsWith('blob:') && !v.startsWith('data:') && !v.includes('://')) {
-                  v = resolve(v);
-                }
-                origDesc.set.call(this, v);
-              },
-              configurable: true, enumerable: true
-            });
-          }
-        } catch(e){ log(cname + " proto.src failed", e.message); }
-      });
-    })();
+    ['HTMLImageElement', 'HTMLAudioElement', 'HTMLVideoElement'].forEach(function(cname) {
+      try {
+        var proto = window[cname].prototype;
+        var origDesc = Object.getOwnPropertyDescriptor(proto, 'src');
+        if (origDesc && origDesc.configurable) {
+          Object.defineProperty(proto, 'src', {
+            get: origDesc.get,
+            set: function(v) {
+              if (v && typeof v === 'string' && !v.startsWith('blob:') && !v.startsWith('data:') && !v.includes('://')) {
+                v = resolve(v);
+              }
+              origDesc.set.call(this, v);
+            },
+            configurable: true, enumerable: true
+          });
+        }
+      } catch(e){ log(cname + " proto.src failed", e.message); }
+    });
+  })();
 
     // Body observer: catch media elements added via innerHTML/React
     (function(){
