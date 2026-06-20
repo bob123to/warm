@@ -32,31 +32,32 @@
   #sidebar { width: 220px; background: var(--bg1); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
   #sidebar-title { height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--line); color: var(--text2); font-size: 11px; text-transform: uppercase; }
   #game-list { flex: 1; overflow-y: auto; }
-  .game-item { display: flex; align-items: center; gap: 9px; padding: 7px 12px; cursor: pointer; border-left: 2px solid transparent; position: relative; }
-  .game-item:hover { background: var(--bg2); }
+  .game-item { display: flex; align-items: center; gap: 9px; padding: 7px 12px; cursor: pointer; border-left: 2px solid transparent; position: relative; transition: transform .2s ease, box-shadow .2s ease, filter .2s ease, opacity .2s ease, border-left-color .2s ease, background .15s ease; }
+  .game-item:hover { background: var(--bg2); transform: scale(1.04); box-shadow: 0 0 16px var(--blue-dim); z-index: 2; }
   .game-item.active { background: var(--bg2); border-left-color: var(--blue); }
-  .game-item.locked { opacity: 0.5; cursor: not-allowed; }
+  .game-item.locked { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .gi-variant-item { transition: transform .2s ease, box-shadow .2s ease, filter .2s ease, opacity .2s ease, border-left-color .2s ease, background .15s ease; }
+  .gi-variant-item:hover { background: var(--bg2); transform: scale(1.04); box-shadow: 0 0 16px var(--blue-dim); z-index: 2; }
+  .gi-variant-item.active { background: var(--bg2); border-left-color: var(--blue); }
+  #game-list:hover .game-item:not(:hover):not(.locked),
+  #game-list:hover .gi-variant-item:not(:hover) { filter: blur(1.5px); opacity: .6; }
   .gi-icon { width: 28px; height: 28px; background: var(--bg3); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 15px; overflow: hidden; flex-shrink: 0; }
   .gi-icon img { width: 100%; height: 100%; object-fit: cover; }
-  .gi-meta { min-width: 0; }
+  .gi-meta { min-width: 0; flex: 1; overflow: hidden; }
   .gi-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .badge { position: absolute; top: 4px; right: 8px; font-size: 8px; font-weight: 800; padding: 0 3px; border-radius: 2px; text-transform: uppercase; }
   .badge-wip { background: var(--yellow); color: #000; }
   .badge-locked { background: var(--red); color: #fff; }
-  .badge-size { position: absolute; bottom: 4px; right: 8px; font-size: 8px; font-weight: 700; padding: 0 3px; border-radius: 2px; font-family: var(--mono); }
+  .badge-size { position: absolute; bottom: 3px; right: 8px; display: flex; align-items: center; justify-content: center; min-width: 26px; height: 11px; font-size: 7px; font-weight: 700; padding: 0 3px; border-radius: 2px; font-family: var(--mono); text-align: center; line-height: 11px; }
   .badge-size-s { background: var(--green); color: #000; }
   .badge-size-m { background: var(--yellow); color: #000; }
   .badge-size-l { background: var(--red); color: #fff; }
-  .game-item { transition: border-left-color 0.2s ease, background 0.15s ease; }
-  .game-item.active { background: var(--bg2); border-left-color: var(--blue); }
-  .gi-variant-item { transition: border-left-color 0.2s ease, background 0.15s ease; }
   .gi-variant { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .gi-variant-name { font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gi-expand { font-size: 10px; color: var(--text3); margin-left: auto; padding: 0 4px; }
   .gi-variant-list { display: none; }
   .gi-variant-list.open { display: block; }
-  .gi-variant-item { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 44px; cursor: pointer; border-left: 2px solid transparent; }
-  .gi-variant-item:hover { background: var(--bg2); }
-  .gi-variant-item.active { background: var(--bg2); border-left-color: var(--blue); }
+  .gi-variant-item { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 44px; cursor: pointer; border-left: 2px solid transparent; position: relative; }
   .gi-variant-name { font-size: 12px; }
   .gi-variant-branch { font-size: 11px; color: var(--text3); font-family: var(--mono); width: 16px; flex-shrink: 0; }
 
@@ -235,7 +236,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><button id="theme-btn" class="tb-btn" onclick="toggleTheme()" title="Toggle theme" style="height:18px;padding:0 6px;font-size:10px;margin-right:4px;">&#x1F3A8;</button><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.5.0 · 0bcc726+ · 2026-06-20 22:10</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><button id="theme-btn" class="tb-btn" onclick="toggleTheme()" title="Toggle theme" style="height:18px;padding:0 6px;font-size:10px;margin-right:4px;">&#x1F3A8;</button><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.5.1 · 4662f7b+ · 2026-06-20 22:20</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -533,14 +534,7 @@ function renderGameItem(list, g, idx) {
   }
 
   const badge = g.locked ? '<div class="badge badge-locked">Locked</div>' : (g.wip ? '<div class="badge badge-wip">WIP</div>' : '');
-  // Size badge (bottom-right, colored green/amber/red)
-  var sizeBadge = '';
-  if (g.size > 0) {
-    var sizeMB = g.size / 1048576;
-    var sizeLabel = sizeMB >= 100 ? (sizeMB/1000).toFixed(1)+'GB' : sizeMB.toFixed(1)+'MB';
-    var sizeClass = sizeMB < 10 ? 'badge-size-s' : (sizeMB < 50 ? 'badge-size-m' : 'badge-size-l');
-    sizeBadge = '<div class="badge-size ' + sizeClass + '">' + sizeLabel + '</div>';
-  }
+  var sizeBadge = sizeBadgeHTML(g.size);
   el.innerHTML = badge + sizeBadge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(g.title||'Untitled')+'</div></div>';
   el.onclick = () => { if (!g.locked || IS_LOCAL) selectGame(idx); };
   list.appendChild(el);
@@ -566,7 +560,12 @@ function renderGroupItem(list, groupKey, groupGames) {
     iconHTML = esc(first.icon || '🎮');
   }
 
-  header.innerHTML = '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(groupTitle)+'</div></div><div class="gi-expand">'+(isOpen ? '▲' : '▼')+'</div>';
+  // Total size for group header
+  var groupSize = 0;
+  groupGames.forEach(function(gg){ if (gg.size) groupSize += gg.size; });
+  var groupBadge = sizeBadgeHTML(groupSize);
+
+  header.innerHTML = groupBadge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(groupTitle)+'</div></div><div class="gi-expand">'+(isOpen ? '▲' : '▼')+'</div>';
   header.onclick = () => {
     if (expandedGroups.has(groupKey)) expandedGroups.delete(groupKey);
     else expandedGroups.add(groupKey);
@@ -583,11 +582,20 @@ function renderGroupItem(list, groupKey, groupGames) {
     vi.className = 'gi-variant-item' + (g.locked && !IS_LOCAL ? ' locked' : '');
     if (currentIdx === originalIdx) vi.classList.add('active');
     const branch = gi === groupGames.length - 1 ? '└─' : '├─';
-    vi.innerHTML = '<span class="gi-variant-branch">' + branch + '</span><span class="gi-variant-name">' + esc(g.variant || g.title) + '</span>';
+    var viBadge = sizeBadgeHTML(g.size);
+    vi.innerHTML = viBadge + '<span class="gi-variant-branch">' + branch + '</span><span class="gi-variant-name">' + esc(g.variant || g.title) + '</span>';
     vi.onclick = (e) => { e.stopPropagation(); if (!g.locked || IS_LOCAL) selectGame(originalIdx); };
     vlist.appendChild(vi);
   });
   list.appendChild(vlist);
+}
+
+function sizeBadgeHTML(bytes) {
+  if (!bytes || bytes <= 0) return '';
+  var mb = bytes / 1048576;
+  var label = mb >= 100 ? (mb/1000).toFixed(1)+'GB' : mb.toFixed(1)+'MB';
+  var cls = mb < 10 ? 'badge-size-s' : (mb < 50 ? 'badge-size-m' : 'badge-size-l');
+  return '<div class="badge-size ' + cls + '">' + label + '</div>';
 }
 
 function filterGames() {
