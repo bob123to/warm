@@ -271,6 +271,7 @@
     "tag": "Scratch",
     "type": "zip",
     "icon": "thumbnails/turbowarp.png",
+    "wip": true,
     "size": 8236909
   }
 ]

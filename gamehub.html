@@ -43,6 +43,13 @@
   .badge { position: absolute; top: 4px; right: 8px; font-size: 8px; font-weight: 800; padding: 0 3px; border-radius: 2px; text-transform: uppercase; }
   .badge-wip { background: var(--yellow); color: #000; }
   .badge-locked { background: var(--red); color: #fff; }
+  .badge-size { position: absolute; bottom: 4px; right: 8px; font-size: 8px; font-weight: 700; padding: 0 3px; border-radius: 2px; font-family: var(--mono); }
+  .badge-size-s { background: var(--green); color: #000; }
+  .badge-size-m { background: var(--yellow); color: #000; }
+  .badge-size-l { background: var(--red); color: #fff; }
+  .game-item { transition: border-left-color 0.2s ease, background 0.15s ease; }
+  .game-item.active { background: var(--bg2); border-left-color: var(--blue); }
+  .gi-variant-item { transition: border-left-color 0.2s ease, background 0.15s ease; }
   .gi-variant { font-size: 11px; color: var(--text2); margin-top: 1px; }
   .gi-expand { font-size: 10px; color: var(--text3); margin-left: auto; padding: 0 4px; }
   .gi-variant-list { display: none; }
@@ -228,7 +235,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.3 · 2a4d190+ · 2026-06-20 21:55</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><button id="theme-btn" class="tb-btn" onclick="toggleTheme()" title="Toggle theme" style="height:18px;padding:0 6px;font-size:10px;margin-right:4px;">&#x1F3A8;</button><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.5.0 · 0bcc726+ · 2026-06-20 22:10</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -526,7 +533,15 @@ function renderGameItem(list, g, idx) {
   }
 
   const badge = g.locked ? '<div class="badge badge-locked">Locked</div>' : (g.wip ? '<div class="badge badge-wip">WIP</div>' : '');
-  el.innerHTML = badge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(g.title||'Untitled')+'</div></div>';
+  // Size badge (bottom-right, colored green/amber/red)
+  var sizeBadge = '';
+  if (g.size > 0) {
+    var sizeMB = g.size / 1048576;
+    var sizeLabel = sizeMB >= 100 ? (sizeMB/1000).toFixed(1)+'GB' : sizeMB.toFixed(1)+'MB';
+    var sizeClass = sizeMB < 10 ? 'badge-size-s' : (sizeMB < 50 ? 'badge-size-m' : 'badge-size-l');
+    sizeBadge = '<div class="badge-size ' + sizeClass + '">' + sizeLabel + '</div>';
+  }
+  el.innerHTML = badge + sizeBadge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(g.title||'Untitled')+'</div></div>';
   el.onclick = () => { if (!g.locked || IS_LOCAL) selectGame(idx); };
   list.appendChild(el);
 }
@@ -2630,6 +2645,79 @@ function formatSize(bytes) {
   while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
   return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
 }
+
+// Theme toggle — swaps between blue and purple accent, both dark
+var currentTheme = 0;
+function toggleTheme() {
+  currentTheme = (currentTheme + 1) % 3;
+  var root = document.documentElement.style;
+  if (currentTheme === 0) {
+    root.setProperty('--blue', '#4a90d9');
+    root.setProperty('--blue-dim', '#2a4f7a');
+    document.getElementById('theme-btn').textContent = '\uD83C\uDFA8';
+  } else if (currentTheme === 1) {
+    root.setProperty('--blue', '#b87ae0');
+    root.setProperty('--blue-dim', '#5e3a7a');
+    document.getElementById('theme-btn').textContent = '\uD83C\uDFA8';
+  } else {
+    root.setProperty('--blue', '#e07a5a');
+    root.setProperty('--blue-dim', '#7a4a3a');
+    document.getElementById('theme-btn').textContent = '\uD83C\uDFA8';
+  }
+  playNavSound(0.3, 120, 'sine');
+}
+
+// Web Audio nav sound
+var _actx = null;
+function getAudioCtx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  return _actx;
+}
+function playNavSound(dur, freq, type) {
+  try {
+    var ctx = getAudioCtx();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq || 220;
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (dur || 0.1));
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + (dur || 0.1));
+  } catch(e) {}
+}
+
+// Keyboard navigation (arrow keys) with glide and sounds
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!games || games.length === 0) return;
+    var filtered = document.getElementById('game-list').querySelectorAll('.game-item, .gi-variant-item');
+    if (filtered.length === 0) return;
+    var dir = e.key === 'ArrowDown' ? 1 : -1;
+    var currentActive = document.querySelector('.game-item.active, .gi-variant-item.active');
+    var newIdx = -1;
+    if (currentActive) {
+      for (var i = 0; i < filtered.length; i++) {
+        if (filtered[i] === currentActive) {
+          newIdx = (i + dir + filtered.length) % filtered.length;
+          break;
+        }
+      }
+    }
+    if (newIdx < 0) newIdx = dir > 0 ? 0 : filtered.length - 1;
+    // Get the game index from the clicked element's bound onclick
+    var target = filtered[newIdx];
+    // Simulate a click to trigger selectGame
+    target.click();
+    // Scroll into view with smooth behavior
+    target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // Play a sound based on direction
+    playNavSound(0.08, dir > 0 ? 280 : 200, 'triangle');
+  }
+});
 
 // Auto-load: use LOCAL_GAMES on file://, or fetch from DEFAULT_URL
 // Feature detection for file:// compatibility
