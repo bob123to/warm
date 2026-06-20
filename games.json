@@ -167,5 +167,40 @@
     "url": "https://dl.dropboxusercontent.com/scl/fi/zq0vg3cy140v02mr0jp9o/nitro-racing.html?rlkey=8z7m8a7dh2aeadb39feh7dwuz",
     "tag": "Racing",
     "icon": "thumbnails/nitro-racing.png"
+  },
+  {
+    "title": "Cookie Clicker",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/otzp46b2u1ts4dxqxd9fa/cookie-clicker.zip?rlkey=ba59idmrhszyao8kong6dk8af",
+    "tag": "Idle",
+    "type": "zip",
+    "icon": "thumbnails/cookie-clicker.png"
+  },
+  {
+    "title": "Cut the Rope",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/p8fas90vcz1o80l60yvnu/cut-the-rope.zip?rlkey=o3yyii2jj3g1ieakzievo15mb",
+    "tag": "Puzzle",
+    "type": "zip",
+    "icon": "thumbnails/cut-the-rope.png"
+  },
+  {
+    "title": "Flappy Bird",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/x3t20boapc7ayqxnfgvey/flappy-bird.zip?rlkey=l979m3vojg30b88200y4m14ra",
+    "tag": "Arcade",
+    "type": "zip",
+    "icon": "thumbnails/flappy-bird.png"
+  },
+  {
+    "title": "Friendly Fire",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/wsdu3m4rs2xv0dckgvd07/friendly-fire.zip?rlkey=yf7auakel3qay8r1wb0ul0i9d",
+    "tag": "Arcade",
+    "type": "zip",
+    "icon": "thumbnails/friendly-fire.png"
+  },
+  {
+    "title": "Hextris",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/tnqyg8ghhevh0ta8cldew/hextris.zip?rlkey=a9dez7mbqb3qng54df43ro7o2",
+    "tag": "Puzzle",
+    "type": "zip",
+    "icon": "thumbnails/hextris.png"
   }
 ]
