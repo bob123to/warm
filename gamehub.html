@@ -630,14 +630,15 @@ async function launchGame(g) {
       const entryBase = entry.substring(0, entry.lastIndexOf('/') + 1);
 
       const resolve = (u) => {
-        if (!u || typeof u !== 'string' || u.includes('://') || u.startsWith('blob:') || u.startsWith('data:') || u.startsWith('#')) return null;
+        if (!u || typeof u !== 'string' || u.startsWith('blob:') || u.startsWith('data:') || u.startsWith('#')) return null;
+        if (u.startsWith('http://')) return 'https://' + u.slice(7);
+        if (u.includes('://')) return null;
         let c = u.replace(/^\.\//, '').split('?')[0];
         if (fm[c]) return fm[c];
         const fn = c.split('/').pop();
         if (!fn) return null;
         const f = Object.keys(fm).find(k => k === c || k === fn || k.endsWith('/' + fn));
         if (f) return fm[f];
-        // Try with entryBase prefix (e.g. ZIP entries nested under a subdirectory)
         if (entryBase) {
           const withBase = entryBase + c;
           if (fm[withBase]) return fm[withBase];
@@ -646,42 +647,42 @@ async function launchGame(g) {
         return null;
       };
 
+      // Capture linked stylesheet info BEFORE src/href rewrite replaces hrefs with blob URLs
+      const cssJobs = [...doc.querySelectorAll('link[rel="stylesheet"]')].map(el => {
+        const href = el.getAttribute('href');
+        const clean = href ? href.split('?')[0] : '';
+        return { el, href, zf: href && !href.includes('://') && !href.startsWith('blob:') ? zip.files[clean] : null };
+      }).filter(j => j.zf);
+
       doc.querySelectorAll('[src], [href]').forEach(el => {
         const attr = el.hasAttribute('src') ? 'src' : 'href';
         const res = resolve(el.getAttribute(attr));
         if (res) el.setAttribute(attr, res);
       });
 
-      // Rewrite CSS url() references in inline styles
       doc.querySelectorAll('style').forEach(el => {
         el.textContent = el.textContent.replace(/url\(\s*(['"]?)([^'")\s]+)\1\s*\)/g, (m, q, url) => {
-          if (url.startsWith('data:') || url.startsWith('blob:') || url.includes('://')) return m;
-          const resolved = resolve(entryBase + url.replace(/^\.\//, ''));
+          if (url.startsWith('data:') || url.startsWith('blob:')) return m;
+          const resolved = /^https?:/.test(url) ? resolve(url) : resolve(entryBase + url.replace(/^\.\//, ''));
           return resolved ? 'url("' + resolved + '")' : m;
         });
       });
 
-      // Rewrite CSS url() references in linked stylesheets
-      const cssLinks = [...doc.querySelectorAll('link[rel="stylesheet"]')];
-      for (const el of cssLinks) {
-        const href = el.getAttribute('href');
-        if (!href || href.startsWith('blob:') || href.startsWith('data:') || href.includes('://')) continue;
-        const zf = zip.files[href];
-        if (!zf) continue;
+      for (const job of cssJobs) {
         try {
-          let css = await zf.async('text');
-          const base = href.substring(0, href.lastIndexOf('/') + 1);
+          let css = await job.zf.async('text');
+          const base = job.href.substring(0, job.href.lastIndexOf('/') + 1);
           css = css.replace(/url\(\s*(['"]?)([^'")\s]+)\1\s*\)/g, (m, q, url) => {
-            if (url.startsWith('data:') || url.startsWith('blob:') || url.includes('://')) return m;
-            const resolved = resolve(base + url.replace(/^\.\//, ''));
+            if (url.startsWith('data:') || url.startsWith('blob:')) return m;
+            const resolved = /^https?:/.test(url) ? resolve(url) : resolve(base + url.replace(/^\.\//, ''));
             return resolved ? 'url("' + resolved + '")' : m;
           });
           const newBlob = new Blob([css], { type: 'text/css' });
           const newUrl = URL.createObjectURL(newBlob);
           resources.push(newUrl);
-          el.setAttribute('href', newUrl);
+          job.el.setAttribute('href', newUrl);
         } catch(e) {
-          console.warn('Failed to rewrite CSS:', href, e);
+          console.warn('Failed to rewrite CSS:', job.href, e);
         }
       }
 
@@ -735,7 +736,9 @@ function getShim(fm, dbg, entryBase) {
     console.log("[Shim] init start debug=" + debug + " origin=" + window.origin + " parentOrigin=" + (window.parent ? window.parent.origin : 'none'));
     var entryBase="${entryBase || ''}";
     function resolve(s){
-      if(!s || typeof s!=="string" || s.startsWith("blob:") || s.startsWith("data:") || s.includes("://")) return s;
+      if(!s || typeof s!=="string" || s.startsWith("blob:") || s.startsWith("data:")) return s;
+      if(s.startsWith("http://")) return "https://" + s.slice(7);
+      if(s.includes("://")) return s;
       var r=s.replace(/^\\.\\//,"").replace(/^\\//, "").split("?")[0];
       if(!r || r === ".") return origin + "index.html";
       if(fm[r]){ log("resolve hit exact:", s); return fm[r]; }
@@ -895,7 +898,7 @@ function getShim(fm, dbg, entryBase) {
       var _rewriteCSS = function(css) {
         if (!css || typeof css !== 'string') return css;
         return css.replace(/url\\(\\s*(['"]?)\\s*([^'")\\s]+)\\s*\\1\\s*\\)/g, function(m, q, u) {
-          if (!u || u.startsWith('data:') || u.startsWith('blob:') || u.includes('://')) return m;
+          if (!u || u.startsWith('data:') || u.startsWith('blob:')) return m;
           var r = resolve(u);
           return r && r !== u ? 'url("' + r + '")' : m;
         });
