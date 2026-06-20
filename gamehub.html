@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.0 · 0c193eb · 2026-06-20 20:27</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.0 · <COMMIT> · 2026-06-20 20:27</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -853,6 +853,14 @@ function getShim(fm, dbg, entryBase) {
       if(s.includes("://")) return s;
       var r=s.replace(/^\\.\\//,"").replace(/^\\//, "").split("?")[0];
       if(!r || r === ".") return origin + "index.html";
+      // If path looks like hostname.tld/path (e.g. extensions.turbowarp.org/lab/text.js), treat as https://
+      var firstSlash=r.indexOf("/");
+      if(firstSlash>0){
+        var firstSeg=r.substring(0,firstSlash);
+        if(firstSeg.indexOf(".")>0 && !firstSeg.startsWith(".") && !firstSeg.endsWith(".")){
+          return "https://"+r;
+        }
+      }
       if(fm[r]){ log("resolve hit exact:", s); return fm[r]; }
       var fn=r.split("/").pop();
       if(!fn) return origin + r;
