@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.3.0</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.0</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -300,6 +300,8 @@
 .addon-card .ac-dl { height: 28px; padding: 0 12px; background: var(--blue-dim); border: 1px solid var(--blue); border-radius: 4px; color: var(--blue); cursor: pointer; font-size: 11px; font-family: var(--font); align-self: flex-start; }
 .addon-card .ac-dl:hover { background: var(--blue); color: #fff; }
 .addon-empty { padding: 30px; text-align: center; color: var(--text3); font-size: 12px; }
+.addon-group { display: flex; flex-direction: column; gap: 8px; }
+.addon-group-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 0 0 4px; }
 </style>
 
 <!-- Editor overlay -->
@@ -657,7 +659,7 @@ async function launchGame(g) {
     if (!r.ok) throw new Error("HTTP " + r.status);
     const totalSize = knownSize || parseInt(r.headers.get('Content-Length')) || 0;
     const sizeStr = totalSize > 0 ? formatBytes(totalSize) : '?';
-    document.getElementById('ov-body').textContent = 'Downloading ' + sizeStr + '... 0%';
+    document.getElementById('ov-body').textContent = 'Downloading 0 / ' + sizeStr;
     document.getElementById('progress-wrap').style.display = 'block';
     updateProgress(0);
     let loaded = 0;
@@ -668,11 +670,9 @@ async function launchGame(g) {
       if (done) break;
       chunks.push(value);
       loaded += value.length;
-      if (totalSize > 0) {
-        const pct = Math.round((loaded / totalSize) * 100);
-        updateProgress(pct);
-        document.getElementById('ov-body').textContent = 'Downloading ' + sizeStr + '... ' + pct + '%';
-      }
+      const pct = totalSize > 0 ? Math.round((loaded / totalSize) * 100) : 0;
+      updateProgress(pct);
+      document.getElementById('ov-body').textContent = 'Downloading ' + formatBytes(loaded) + ' / ' + sizeStr;
     }
     let data = new Uint8Array(loaded);
     let pos = 0;
@@ -1203,14 +1203,27 @@ function showAddons() {
   if (!g.addons || !g.addons.length) {
     list.innerHTML = '<div class="addon-empty">No addons available for this game.</div>';
   } else {
-    list.innerHTML = g.addons.map((a, i) => {
-      const sz = a.size ? formatBytes(a.size) : '';
-      return '<div class="addon-card">' +
-        '<div class="ac-header"><span class="ac-name">' + esc(a.name) + '</span>' +
-        (sz ? '<span class="ac-size">' + sz + '</span>' : '') + '</div>' +
-        (a.desc ? '<div class="ac-desc">' + esc(a.desc) + '</div>' : '') +
-        '<button class="ac-dl" onclick="downloadAddon(' + addonGameIdx + ',' + i + ')">&#x2193; Download</button></div>';
-    }).join('');
+    const groups = {};
+    g.addons.forEach((a, i) => {
+      const grp = a.group || 'Other';
+      if (!groups[grp]) groups[grp] = [];
+      groups[grp].push(i);
+    });
+    let html = '';
+    for (const [grp, indices] of Object.entries(groups)) {
+      html += '<div class="addon-group"><div class="addon-group-title">' + esc(grp) + '</div>';
+      html += indices.map(i => {
+        const a = g.addons[i];
+        const sz = a.size ? formatBytes(a.size) : '';
+        return '<div class="addon-card">' +
+          '<div class="ac-header"><span class="ac-name">' + esc(a.name) + '</span>' +
+          (sz ? '<span class="ac-size">' + sz + '</span>' : '') + '</div>' +
+          (a.desc ? '<div class="ac-desc">' + esc(a.desc) + '</div>' : '') +
+          '<button class="ac-dl" onclick="downloadAddon(' + addonGameIdx + ',' + i + ')">&#x2193; Download</button></div>';
+      }).join('');
+      html += '</div>';
+    }
+    list.innerHTML = html;
   }
   document.getElementById('addons-overlay').classList.add('active');
 }
