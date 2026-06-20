@@ -55,7 +55,27 @@
     "icon": "thumbnails/minecraft-1-8.png",
     "group": "Minecraft",
     "variant": "1.8 Eagler",
-    "size": 15133433
+    "size": 15133433,
+    "addons": [
+      {
+        "name": "Faithful 32x",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/3qrjgdd8ej1patx61pwoq/faithful-32x.zip?rlkey=t7h1cdr8sqex0tha9hw0q667n",
+        "size": 9977573,
+        "desc": "Faithful 32x32 resource pack — keeps the classic look at higher resolution"
+      },
+      {
+        "name": "TreeCapitator",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/4geqokl0pesndf1i5vf1f/treecapitator-datapack.zip?rlkey=1yyoukm1vvvidvkk3wi3vbls1",
+        "size": 45156,
+        "desc": "Datapack — chop whole trees by breaking one log"
+      },
+      {
+        "name": "VeinMiner",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/2c17zo5nzsmacyub87gas/veinminer-datapack.zip?rlkey=tdmtf1rgkufagbk2r2wsoqzfv",
+        "size": 21223,
+        "desc": "Datapack — mine entire ore veins at once"
+      }
+    ]
   },
   {
     "title": "Minecraft 1.12.2",
@@ -64,7 +84,27 @@
     "icon": "thumbnails/minecraft-1-12-2.png",
     "group": "Minecraft",
     "variant": "1.12.2 Eagler",
-    "size": 20103718
+    "size": 20103718,
+    "addons": [
+      {
+        "name": "Faithful 32x",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/3qrjgdd8ej1patx61pwoq/faithful-32x.zip?rlkey=t7h1cdr8sqex0tha9hw0q667n",
+        "size": 9977573,
+        "desc": "Faithful 32x32 resource pack"
+      },
+      {
+        "name": "TreeCapitator",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/4geqokl0pesndf1i5vf1f/treecapitator-datapack.zip?rlkey=1yyoukm1vvvidvkk3wi3vbls1",
+        "size": 45156,
+        "desc": "Datapack — chop whole trees"
+      },
+      {
+        "name": "VeinMiner",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/2c17zo5nzsmacyub87gas/veinminer-datapack.zip?rlkey=tdmtf1rgkufagbk2r2wsoqzfv",
+        "size": 21223,
+        "desc": "Datapack — mine ore veins at once"
+      }
+    ]
   },
   {
     "title": "Paper Minecraft",
@@ -73,7 +113,27 @@
     "icon": "thumbnails/paper-minecraft.png",
     "group": "Minecraft",
     "variant": "Paper",
-    "size": 6211171
+    "size": 6211171,
+    "addons": [
+      {
+        "name": "Faithful 32x",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/3qrjgdd8ej1patx61pwoq/faithful-32x.zip?rlkey=t7h1cdr8sqex0tha9hw0q667n",
+        "size": 9977573,
+        "desc": "Faithful 32x32 resource pack"
+      },
+      {
+        "name": "TreeCapitator",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/4geqokl0pesndf1i5vf1f/treecapitator-datapack.zip?rlkey=1yyoukm1vvvidvkk3wi3vbls1",
+        "size": 45156,
+        "desc": "Datapack — chop whole trees"
+      },
+      {
+        "name": "VeinMiner",
+        "url": "https://dl.dropboxusercontent.com/scl/fi/2c17zo5nzsmacyub87gas/veinminer-datapack.zip?rlkey=tdmtf1rgkufagbk2r2wsoqzfv",
+        "size": 21223,
+        "desc": "Datapack — mine ore veins at once"
+      }
+    ]
   },
   {
     "title": "Slope 3D",

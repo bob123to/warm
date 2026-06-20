@@ -211,6 +211,7 @@
   <div id="main">
     <div id="game-bar">
       <span id="gb-title" style="flex:1; font-weight:500;"></span>
+      <button class="tb-btn" id="addons-btn" onclick="showAddons()" style="display:none;">&#x1F4E6; Addons</button>
       <button class="tb-btn" onclick="refreshGames()">&#x21bb; Refresh</button>
       <button class="tb-btn" onclick="toggleFullscreen()">Fullscreen</button>
       <button class="tb-btn" onclick="showUsage()">Usage</button>
@@ -272,6 +273,33 @@
 .usage-section { display: flex; flex-direction: column; gap: 2px; }
 .usage-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
 .usage-value { font-size: 13px; font-family: var(--mono); color: var(--text); }
+</style>
+
+<!-- Addons panel -->
+<div id="addons-overlay">
+  <div id="addons-box">
+    <div id="addons-topbar"><span class="logo">&#x1F4E6; Addons</span><span id="addons-game-name" style="font-size:11px;color:var(--text3);"></span><button id="addons-close" onclick="toggleAddons()">&#x2715; Close</button></div>
+    <div id="addons-list"></div>
+  </div>
+</div>
+
+<style>
+#addons-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1700; }
+#addons-overlay.active { display: flex; }
+#addons-box { background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; width: 480px; max-height: 70vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+#addons-topbar { height: 38px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); gap: 10px; }
+#addons-topbar .logo { font-size: 12px; font-weight: 600; }
+#addons-close { margin-left: auto; height: 24px; padding: 0 8px; background: transparent; border: 1px solid var(--line2); border-radius: 3px; color: var(--text3); cursor: pointer; font-size: 11px; }
+#addons-close:hover { border-color: var(--text2); color: var(--text); }
+#addons-list { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.addon-card { background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.addon-card .ac-header { display: flex; align-items: center; gap: 8px; }
+.addon-card .ac-name { font-size: 13px; font-weight: 600; flex: 1; }
+.addon-card .ac-size { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+.addon-card .ac-desc { font-size: 11px; color: var(--text2); }
+.addon-card .ac-dl { height: 28px; padding: 0 12px; background: var(--blue-dim); border: 1px solid var(--blue); border-radius: 4px; color: var(--blue); cursor: pointer; font-size: 11px; font-family: var(--font); align-self: flex-start; }
+.addon-card .ac-dl:hover { background: var(--blue); color: #fff; }
+.addon-empty { padding: 30px; text-align: center; color: var(--text3); font-size: 12px; }
 </style>
 
 <!-- Editor overlay -->
@@ -553,8 +581,11 @@ function filterGames() {
 
 function selectGame(i) {
   currentIdx = i;
+  addonGameIdx = i;
   renderSidebar();
-  launchGame(games[i]);
+  const g = games[i];
+  document.getElementById('addons-btn').style.display = (g.addons && g.addons.length) ? '' : 'none';
+  launchGame(g);
 }
 
 async function syncDropbox() {
@@ -1156,10 +1187,47 @@ function refreshGames() {
 function clearCache() { indexedDB.deleteDatabase('GHubCache'); location.reload(); }
 
 function formatBytes(b) {
-  if (b === 0) return '0 B';
+  if (!b || b === 0) return '0 B';
   const u = ['B','KB','MB','GB']; let i = 0;
-  while (b >= 1024 && i < u.length-1) { b /= 1024; i++; }
-  return b.toFixed(i > 0 ? 1 : 0) + ' ' + u[i];
+  let s = b;
+  while (s >= 1024 && i < u.length-1) { s /= 1024; i++; }
+  return s.toFixed(i > 0 ? 1 : 0) + ' ' + u[i];
+}
+
+let addonGameIdx = -1;
+function showAddons() {
+  if (addonGameIdx < 0) return;
+  const g = games[addonGameIdx];
+  const list = document.getElementById('addons-list');
+  document.getElementById('addons-game-name').textContent = g.title;
+  if (!g.addons || !g.addons.length) {
+    list.innerHTML = '<div class="addon-empty">No addons available for this game.</div>';
+  } else {
+    list.innerHTML = g.addons.map((a, i) => {
+      const sz = a.size ? formatBytes(a.size) : '';
+      return '<div class="addon-card">' +
+        '<div class="ac-header"><span class="ac-name">' + esc(a.name) + '</span>' +
+        (sz ? '<span class="ac-size">' + sz + '</span>' : '') + '</div>' +
+        (a.desc ? '<div class="ac-desc">' + esc(a.desc) + '</div>' : '') +
+        '<button class="ac-dl" onclick="downloadAddon(' + addonGameIdx + ',' + i + ')">&#x2193; Download</button></div>';
+    }).join('');
+  }
+  document.getElementById('addons-overlay').classList.add('active');
+}
+function toggleAddons() {
+  document.getElementById('addons-overlay').classList.toggle('active');
+}
+function downloadAddon(gi, ai) {
+  const g = games[gi];
+  if (!g || !g.addons || !g.addons[ai]) return;
+  const a = g.addons[ai];
+  const aEl = document.createElement('a');
+  aEl.href = a.url;
+  aEl.download = a.name.replace(/[^a-zA-Z0-9.-]/g, '_') + '.zip';
+  aEl.target = '_blank';
+  aEl.rel = 'noopener';
+  aEl.click();
+  setStatus('ok', 'Downloading ' + a.name);
 }
 
 let usageInterval = null;
