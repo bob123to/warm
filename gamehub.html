@@ -1187,6 +1187,10 @@ function getShim(fm, dbg, entryBase) {
     });
     // Proxy fetch for external URLs via parent postMessage (about:srcdoc can't load cross-origin)
     var proxyFetch = function(url) {
+      var finalUrl = url;
+      if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('blob:') && !url.startsWith('data:')) {
+        finalUrl = 'https://' + url;
+      }
       return new Promise(function(r, j) {
         var id = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
         var handler = function(e) {
@@ -1197,7 +1201,7 @@ function getShim(fm, dbg, entryBase) {
           }
         };
         window.addEventListener('message', handler);
-        window.parent.postMessage({type: 'fetch-proxy', id: id, url: url}, '*');
+        window.parent.postMessage({type: 'fetch-proxy', id: id, url: finalUrl}, '*');
         setTimeout(function(){ window.removeEventListener('message', handler); j(new Error('proxy timeout')); }, 15000);
       });
     };
@@ -1217,7 +1221,10 @@ function getShim(fm, dbg, entryBase) {
     var OF=window.fetch; window.fetch=function(i,n){
       var u=(typeof i==="string"?i:(i&&i.url?i.url:i));
       var r=resolve(u);
-      if (r !== u) return OF(r||u,n);
+      if (r !== u) {
+        if (isExternal(r)) return proxyFetch(r);
+        return OF(r||u,n);
+      }
       if (isExternal(u)) return proxyFetch(u);
       return OF(u,n);
     };
