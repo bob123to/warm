@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.3 · 739ae8c+ · 2026-06-20 21:45</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.3 · 2a4d190+ · 2026-06-20 21:50</div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -862,33 +862,36 @@ function getShim(fm, dbg, entryBase) {
     console.log("[Shim] init start debug=" + debug + " origin=" + window.origin + " parentOrigin=" + (window.parent ? window.parent.origin : 'none'));
     var entryBase="${entryBase || ''}";
     // Bypass sitelock (CrazyGames) and insecure-connection checks (Unity)
-    (function(){
-      var props = {
-        hostname: 'localhost',
-        host: 'localhost',
-        protocol: 'https:',
-        port: '443',
-        href: 'https://localhost/game/index.html',
-        origin: 'https://localhost'
-      };
-      Object.keys(props).forEach(function(k) {
-        try {
-          Object.defineProperty(window.location, k, {
-            get: function(){ return props[k]; },
-            configurable: true
-          });
-        } catch(e) {
-          try {
-            Object.defineProperty(Location.prototype, k, {
-              get: function(){ return props[k]; },
-              configurable: true
-            });
-          } catch(e2) {}
+    // Use multiple approaches: instance own-property, prototype override, and global function traps
+    (function() {
+      // 1: Define own data properties on window.location (shadows prototype accessors)
+      var locProps = { hostname:'localhost', host:'localhost', protocol:'https:', port:'443', href:'https://localhost/', origin:'https://localhost' };
+      Object.keys(locProps).forEach(function(k) {
+        try { Object.defineProperty(window.location, k, { value: locProps[k], writable: false, configurable: true }); }
+        catch(e) {
+          try { Object.defineProperty(Location.prototype, k, { get: function(){ return locProps[k]; }, configurable: true }); }
+          catch(e2) {}
         }
       });
+      // 2: Override Array.prototype.indexOf so hostname-check for "crazygames" always passes
+      var _oi = Array.prototype.indexOf;
+      Array.prototype.indexOf = function(v) {
+        if (v === 'crazygames') return this.length > 0 ? (this.length - 1) : 0;
+        return _oi.apply(this, arguments);
+      };
+      // 3: Override String.prototype.split so empty hostname ("") produces a non-empty array
+      var _os = String.prototype.split;
+      String.prototype.split = function(sep) {
+        if (sep === '.' && (this === '' || this === 'about:srcdoc')) return ['localhost'];
+        return _os.apply(this, arguments);
+      };
+      // 4: Fake isSecureContext and predefine SDK globals so sitelocks short-circuit
       try { Object.defineProperty(window, 'isSecureContext', { get: function(){ return true; }, configurable: true }); } catch(e){}
       try { Object.defineProperty(document, 'isSecureContext', { get: function(){ return true; }, configurable: true }); } catch(e){}
-      log("location/isSecureContext override installed");
+      // 5: Predefine CrazyGames / CrazySDK globals so SDK init succeeds immediately
+      if (!window.CrazyGames) window.CrazyGames = { SDK: { game: { isSitelocked: function(){ return false; } } } };
+      if (!window.CrazySDK) window.CrazySDK = { isInitialized: true, game: { isSitelocked: function(){ return false; } } };
+      log("sitelock bypass installed (own-prop + proto + indexOf + split + globals)");
     })();
     function resolve(s){
       if(!s || typeof s!=="string" || s.startsWith("blob:") || s.startsWith("data:")) return s;
