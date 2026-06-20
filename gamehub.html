@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.0 · 76d4723 · 2026-06-20 19:38</div></div>
+<div id="statusbar"><div id="status-dot"></div><div id="status-text">Ready</div><span id="features" style="color:var(--yellow);font-size:10px;margin-left:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span><div id="version-tag" style="margin-left: auto; color: var(--text3); font-size: 10px;">v2.4.0 · <COMMIT> · <DATE></div></div>
 
 <!-- Password overlay -->
 <div id="pwd-overlay">
@@ -930,6 +930,17 @@ function getShim(fm, dbg, entryBase) {
             }
             _setAttr(attr, val);
           };
+          // Blockly uses setAttributeNS for xlink:href
+          var _setAttrNS = el.setAttributeNS.bind(el);
+          el.setAttributeNS = function(ns, attr, val) {
+            if (val && typeof val === 'string' && !val.startsWith('blob:') && !val.startsWith('data:') && !val.includes('://')) {
+              if (attr === 'href' || attr === 'xlink:href') {
+                _setAttrNS(ns, attr, resolve(val));
+                return;
+              }
+            }
+            _setAttrNS(ns, attr, val);
+          };
           try {
             Object.defineProperty(el, 'href', {
               get: function(){ return el.getAttribute ? el.getAttribute('href') : null; },
@@ -1053,6 +1064,30 @@ function getShim(fm, dbg, entryBase) {
         }
       });
       _mo2.observe(document.body, {childList:true, subtree:true});
+    })();
+
+    // Attribute-change observer: catch href/src changes on SVG image/media elements
+    (function(){
+      if (!document.body) return;
+      var _mo3 = new MutationObserver(function(muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var m = muts[i];
+          var el = m.target;
+          if (!el || !el.tagName) continue;
+          var v = m.newValue;
+          if (!v || v.startsWith('blob:') || v.startsWith('data:') || v.includes('://')) continue;
+          if (el.namespaceURI === 'http://www.w3.org/2000/svg' && el.tagName === 'image') {
+            var r = resolve(v);
+            if (r !== v) { log("attr observer svg:image", m.attributeName, v, "->", r.substring(0,60)); el.setAttribute(m.attributeName, r); }
+          } else if (el.tagName === 'IMG' || el.tagName === 'AUDIO' || el.tagName === 'VIDEO' || el.tagName === 'SOURCE') {
+            if (m.attributeName === 'src') {
+              var r = resolve(v);
+              if (r !== v) { log("attr observer", el.tagName, v, "->", r.substring(0,60)); el.setAttribute('src', r); }
+            }
+          }
+        }
+      });
+      _mo3.observe(document.body, {childList:false, subtree:true, attributes:true, attributeFilter:['href','xlink:href','src']});
     })();
 
     var OU = window.URL;
