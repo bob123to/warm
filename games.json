@@ -38,6 +38,7 @@
     "title": "Buckshot roulette",
     "url": "https://dl.dropboxusercontent.com/scl/fi/0pj6tx7kqf0ek69omodeh/buckshot.zip?rlkey=1pgdxccbt15r4sqswe4oj7eos&st=2fp9rg3p",
     "type": "zip",
+    "tag": "Strategy",
     "icon": "thumbnails/buckshot-roulette.png",
     "wip": true,
     "size": 247449150
@@ -45,6 +46,7 @@
   {
     "title": "Truck driving",
     "url": "https://dl.dropboxusercontent.com/scl/fi/gqqnj4umxxw5zq8hn8fbt/Truck-Driving-Challenge.html?rlkey=tlqn367r2k0tmmgfi0ux2nvl8&st=y3z5myc9",
+    "tag": "Simulation",
     "icon": "thumbnails/truck-driving.png",
     "size": 67786370
   },
