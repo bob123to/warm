@@ -68,17 +68,8 @@
   .gi-variant-branch { font-size: 11px; color: var(--text3); font-family: var(--mono); width: 16px; flex-shrink: 0; }
 
   #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-  /* View toggle buttons */
-  .view-btn { flex:1; height:26px; background:var(--bg0); border:1px solid var(--line2); border-radius:3px; color:var(--text3); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:border-color .1s,color .1s,background .1s; }
-  .view-btn:hover { border-color:var(--blue); color:var(--text); }
-  .view-btn.active { background:var(--blue-dim); border-color:var(--blue); color:var(--blue); }
-  #view-bar { display:flex; gap:3px; margin-top:6px; }
-
-  /* Grid views */
-  #grid-wrap { display:grid; gap:12px; padding:16px; overflow-y:auto; align-content:start; }
-  #grid-wrap.list-view { display:none; }
-  #grid-wrap.grid-view { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); }
-  #grid-wrap.fullgrid-view { grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; padding:20px; }
+  /* Grid view */
+  #grid-wrap { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; padding:20px; overflow-y:auto; align-content:start; }
   .grid-card { background:var(--bg1); border:1px solid var(--line); border-radius:8px; overflow:hidden; cursor:pointer; transition:transform .15s,border-color .15s,box-shadow .15s; display:flex; flex-direction:column; position:relative; }
   .grid-card:hover { transform:translateY(-3px); border-color:var(--blue-dim); box-shadow:0 4px 16px rgba(0,0,0,0.3); }
   .grid-card:active { transform:translateY(-1px); }
@@ -95,10 +86,11 @@
   #grid-wrap.compact .grid-card .gc-body { padding:6px 8px; gap:2px; }
   #grid-wrap.compact .grid-card .gc-title { font-size:11px; }
   #grid-wrap.compact .grid-card .gc-sub { font-size:10px; }
-  #grid-wrap.compact.grid-view { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; padding:10px; }
-  #grid-wrap.compact.fullgrid-view { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; padding:14px; }
-  .fullgrid-active #sidebar { display:none; }
-  .fullgrid-active .layout #main { margin:0; }
+  #grid-wrap.compact { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; padding:14px; }
+  #grid-toolbar { display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--bg0); border-bottom:1px solid var(--line); flex-shrink:0; }
+  #grid-toolbar .gt-spacer { flex:1; }
+  #grid-toolbar .gt-btn { height:28px; padding:0 10px; background:var(--bg1); border:1px solid var(--line2); border-radius:4px; color:var(--text2); cursor:pointer; font-size:12px; transition:border-color .1s,color .1s; }
+  #grid-toolbar .gt-btn:hover { border-color:var(--blue); color:var(--text); }
 
   #game-bar { height: 36px; background: var(--bg1); border-bottom: 1px solid var(--line); display: none; align-items: center; padding: 0 10px; gap: 8px; }
   #frame-wrap { flex: 1; background: #000; position: relative; display: none; }
@@ -250,11 +242,6 @@
     </div>
     <div style="padding: 6px 10px; border-bottom: 1px solid var(--line);">
       <input type="text" id="search-input" placeholder="Search games..." style="width: 100%; height: 28px; background: var(--bg0); border: 1px solid var(--line2); border-radius: 3px; color: var(--text); padding: 0 8px; outline: none; font-size: 12px;" oninput="filterGames()" />
-      <div id="view-bar" style="display:flex; gap:3px; margin-top:6px;">
-        <button class="view-btn" data-view="list" onclick="setView('list')" title="List">☰</button>
-        <button class="view-btn" data-view="grid" onclick="setView('grid')" title="Grid">▦</button>
-        <button class="view-btn active" data-view="fullgrid" onclick="setView('fullgrid')" title="Fullscreen Grid">⊞</button>
-      </div>
       <button id="sync-btn" onclick="syncDropbox()" style="display:none; width:100%; margin-top:6px; height:28px; padding:0 8px; background:var(--blue-dim); border:1px solid var(--blue); border-radius:3px; color:var(--blue); cursor:pointer; font-size:11px;">&#x21bb; Sync from Dropbox</button>
       <button id="editor-btn" onclick="toggleEditor()" style="display:none; width:100%; margin-top:4px; height:28px; padding:0 8px; background:var(--green-dim); border:1px solid var(--green); border-radius:3px; color:var(--green); cursor:pointer; font-size:11px;">&#x270E; Edit Games</button>
     </div>
@@ -263,12 +250,17 @@
     <div id="main">
       <div id="game-bar">
         <span id="gb-title" style="flex:1; font-weight:500;"></span>
-        <button class="tb-btn" id="browse-btn" onclick="showBrowse()" style="display:none;">&#x21A9; Browse</button>
         <button class="tb-btn" id="addons-btn" onclick="showAddons()" style="display:none;">&#x1F4E6; Addons</button>
-        <button class="tb-btn" onclick="refreshGames()">&#x21bb; Refresh</button>
         <button class="tb-btn" onclick="toggleFullscreen()">Fullscreen</button>
         <button class="tb-btn" onclick="showUsage()">Usage</button>
         <button class="tb-btn" onclick="reloadGame()">Reload</button>
+        <button class="tb-btn" onclick="showGrid()">&#x21A9; Browse</button>
+      </div>
+      <div id="grid-toolbar">
+        <span id="grid-count" style="font-size:11px;color:var(--text3);"></span>
+        <div class="gt-spacer"></div>
+        <button class="gt-btn" onclick="refreshGames()">&#x21bb; Refresh</button>
+        <button class="gt-btn" onclick="toggleSettings()">&#x2699; Settings</button>
       </div>
       <div id="frame-wrap">
         <div id="overlay">
@@ -278,7 +270,7 @@
           <div id="progress-wrap"><div id="progress-bar"></div></div>
         </div>
       </div>
-      <div id="grid-wrap" style="display:none;"></div>
+      <div id="grid-wrap"></div>
     </div>
 </div>
 
@@ -542,7 +534,6 @@ if (IS_LOCAL) {
 const DEFAULT_URL = 'games.json';
 let games = [], currentIdx = -1, resources = [];
 let editorGames = [], editorSel = -1, editorActive = false, editorFromDropbox = false;
-let viewMode = 'fullgrid';
 let settings = { light: false, compact: false, stable: true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ghub_settings') || '{}')); } catch(e) {}
 applySettings();
@@ -572,10 +563,10 @@ async function loadURL() {
     const r = await fetch(url + cacheBust + Date.now());
     games = await r.json();
     renderSidebar();
-    document.getElementById('game-bar').style.display = 'flex';
-    document.getElementById('frame-wrap').style.display = 'block';
+    document.getElementById('game-bar').style.display = 'none';
+    document.getElementById('grid-toolbar').style.display = '';
+    document.getElementById('frame-wrap').style.display = 'none';
     setStatus('ok', 'Loaded ' + games.length + ' games');
-    setView(viewMode);
   } catch(e) { setStatus('err', 'Load failed'); }
 }
 
@@ -607,8 +598,7 @@ function renderSidebar(filteredGames) {
     }
   });
 
-  // Also render grid view
-  if (viewMode !== 'list') renderGrid(displayGames);
+  renderGrid(displayGames);
 }
 
 function renderGameItem(list, g, idx) {
@@ -650,6 +640,8 @@ function renderGroupItem(list, groupKey, groupGames) {
     iconHTML = esc(first.icon || '🎮');
   }
 
+  var groupSize = 0;
+  groupGames.forEach(function(gg){ if (gg.size) groupSize += gg.size; });
   var groupBadge = sizeBadgeHTML(groupSize);
 
   header.innerHTML = groupBadge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(groupTitle)+'</div></div><div class="gi-expand">'+(isOpen ? '▲' : '▼')+'</div>';
@@ -689,19 +681,18 @@ function combinedBadgeHTML(g) {
   var label = '', cls = '';
   if (g.locked) { label = 'Locked'; cls = 'badge-locked'; }
   else if (g.wip) { label = 'WIP'; cls = 'badge-wip'; }
+  else if (settings.stable) { label = 'Stable'; cls = 'badge-size-s'; }
   var sizeStr = '';
   if (g.size > 0) {
     var mb = g.size / 1048576;
     sizeStr = mb >= 100 ? (mb/1000).toFixed(1)+'GB' : mb.toFixed(1)+'MB';
-    if (!cls) cls = mb < 10 ? 'badge-size-s' : (mb < 50 ? 'badge-size-m' : 'badge-size-l');
+    if (!label && !cls) cls = mb < 10 ? 'badge-size-s' : (mb < 50 ? 'badge-size-m' : 'badge-size-l');
     else cls += ' badge-combo';
   }
   if (label && sizeStr) return '<div class="badge-size ' + cls + '">' + label + '<span class="bc-sep">/</span>' + sizeStr + '</div>';
   if (sizeStr) return '<div class="badge-size ' + cls + '">' + sizeStr + '</div>';
-  if (label) return '<div class="badge badge-' + (g.locked?'locked':'wip') + '">' + label + '</div>';
-  if (!settings.stable) return '';
-  if (g.size > 0) return '<div class="badge-size badge-size-s">Stable</div>';
-  return '<div class="badge badge-locked" style="background:var(--green);color:#000;">Stable</div>';
+  if (label) return '<div class="badge-size ' + cls + '">' + label + '</div>';
+  return '';
 }
 
 function filterGames() {
@@ -710,44 +701,21 @@ function filterGames() {
   renderSidebar(filtered);
 }
 
-function setView(mode) {
-  viewMode = mode;
-  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === mode));
+function showGrid() {
   const grid = document.getElementById('grid-wrap');
   const frame = document.getElementById('frame-wrap');
-  const layout = document.querySelector('.layout');
-  const browseBtn = document.getElementById('browse-btn');
-  if (mode === 'list') {
-    grid.style.display = 'none';
-    frame.style.display = '';
-    layout.classList.remove('fullgrid-active');
-    browseBtn.style.display = 'none';
-  } else {
-    grid.style.display = '';
-    grid.className = 'grid-view';
-    if (mode === 'fullgrid') { grid.classList.add('fullgrid-view'); layout.classList.add('fullgrid-active'); frame.style.display = 'none'; }
-    else { layout.classList.remove('fullgrid-active'); }
-    if (games.length) renderGrid(games);
-    browseBtn.style.display = 'none';
-  }
-}
-
-function showBrowse() {
-  if (viewMode === 'list') return;
-  const grid = document.getElementById('grid-wrap');
-  const frame = document.getElementById('frame-wrap');
-  const gameBar = document.getElementById('game-bar');
+  const toolbar = document.getElementById('grid-toolbar');
   grid.style.display = '';
   frame.style.display = 'none';
-  gameBar.style.display = '';
-  document.getElementById('browse-btn').style.display = 'none';
-  renderGrid(games);
-  if (viewMode === 'fullgrid') document.querySelector('.layout').classList.add('fullgrid-active');
+  toolbar.style.display = '';
+  document.getElementById('game-bar').style.display = 'none';
+  if (games.length) renderGrid(games);
 }
 
 function renderGrid(filteredGames) {
   const grid = document.getElementById('grid-wrap'); grid.innerHTML = '';
   const displayGames = filteredGames || games;
+  document.getElementById('grid-count').textContent = displayGames.length + ' games';
   displayGames.forEach(g => {
     const idx = games.indexOf(g);
     const card = document.createElement('div');
@@ -812,16 +780,15 @@ async function launchGame(g) {
   const wrap = document.getElementById('frame-wrap');
   const grid = document.getElementById('grid-wrap');
   grid.style.display = 'none';
+  document.getElementById('grid-toolbar').style.display = 'none';
   wrap.style.display = '';
-  document.getElementById('game-bar').style.display = '';
-  document.querySelector('.layout').classList.remove('fullgrid-active');
+  document.getElementById('game-bar').style.display = 'flex';
   let frame = document.getElementById('game-frame');
   if (frame) { frame.srcdoc = ''; frame.remove(); }
   resources.forEach(u => URL.revokeObjectURL(u));
   resources = [];
 
   document.getElementById('gb-title').textContent = g.title + (g.wip ? ' [WIP]' : '');
-  document.getElementById('browse-btn').style.display = viewMode !== 'list' ? '' : 'none';
   setStatus('loading', 'Preparing ' + g.title);
 
   try {
@@ -2933,10 +2900,10 @@ if (window.location.protocol === 'file:' && !IS_LOCAL && typeof LOCAL_GAMES !== 
     }
   });
   renderSidebar();
-  document.getElementById('game-bar').style.display = 'flex';
-  document.getElementById('frame-wrap').style.display = 'block';
+  document.getElementById('game-bar').style.display = 'none';
+  document.getElementById('grid-toolbar').style.display = '';
+  document.getElementById('frame-wrap').style.display = 'none';
   setStatus('ok', 'Loaded ' + games.length + ' local games \u26a0\ufe0f file://');
-  setView(viewMode);
 } else if (window.location.protocol === 'file:' && !IS_LOCAL && DEFAULT_URL) {
   setStatus('loading', 'No local games, fetching from Dropbox...');
   document.getElementById('url-input').value = DEFAULT_URL;
