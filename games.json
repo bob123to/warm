@@ -275,5 +275,21 @@
     "icon": "thumbnails/turbowarp.png",
     "wip": true,
     "size": 8236909
+  },
+  {
+    "title": "Geometry Dash",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/aoek27i0kjf2smgag0mt4/geometry-dash.zip?rlkey=2jxm1s2pnxjsnk9msiq8mzgv6",
+    "tag": "Rhythm",
+    "type": "zip",
+    "icon": "thumbnails/geometry-dash.png",
+    "size": 42583408
+  },
+  {
+    "title": "Polytrack",
+    "url": "https://dl.dropboxusercontent.com/scl/fi/k2j1yfxtkwgkfyeruttze/polytrack.zip?rlkey=6lprrk5rn1v4cbb6t05e4nsg5",
+    "tag": "Racing",
+    "type": "zip",
+    "icon": "thumbnails/polytrack.png",
+    "size": 4928705
   }
 ]
