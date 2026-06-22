@@ -796,7 +796,7 @@ function renderGrid(filteredGames) {
       if (first.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) { iconHTML = '<img src="'+esc(iconUrl)+'" onerror="this.parentNode.textContent=\'🎮\'">'; }
       else { iconHTML = esc(first.icon || '🎮'); }
       var sizeLabel = totalSize > 0 ? formatBytes(totalSize) : '';
-      header.innerHTML = '<div class="badge-size badge-size-s">'+groupGames.length+'</div><div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(groupTitle)+'</div><div class="gc-sub">'+esc(sizeLabel)+'</div></div><div class="gc-expand">&#x25BE; variants</div>';
+      header.innerHTML = '<div class="badge-size badge-size-s">'+groupGames.length+'<span class="bc-sep">/</span>'+esc(sizeLabel)+'</div><div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(groupTitle)+'</div></div><div class="gc-expand">&#x25BE;</div>';
       header.onclick = function(e){
         showVariantPopup(groupGames, header, groupKey);
         e.stopPropagation();
