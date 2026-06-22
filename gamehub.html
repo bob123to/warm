@@ -755,12 +755,18 @@ function filterGames() {
 
 function showGrid() {
   const grid = document.getElementById('grid-wrap');
-  const frame = document.getElementById('frame-wrap');
+  const frameWrap = document.getElementById('frame-wrap');
   const toolbar = document.getElementById('grid-toolbar');
+  var oldFrame = document.getElementById('game-frame');
+  if (oldFrame) { oldFrame.srcdoc = ''; oldFrame.remove(); }
+  resources.forEach(function(u){ try { URL.revokeObjectURL(u); } catch(e) {} });
+  resources = [];
   grid.style.display = '';
-  frame.style.display = 'none';
+  frameWrap.style.display = 'none';
   toolbar.style.display = '';
   document.getElementById('game-bar').style.display = 'none';
+  document.getElementById('dl-progress').style.display = 'none';
+  document.getElementById('overlay').classList.add('hidden');
   if (games.length) renderGrid(games);
 }
 
