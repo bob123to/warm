@@ -50,6 +50,8 @@
   .badge-size-s { background: var(--green); color: #000; }
   .badge-size-m { background: var(--yellow); color: #000; }
   .badge-size-l { background: var(--red); color: #fff; }
+  .badge-combo { border-radius:0; border-top-left-radius:2px; border-bottom-left-radius:2px; }
+  .bc-sep { margin:0 1px; font-weight:400; opacity:.7; }
   .gi-variant { font-size: 11px; color: var(--text2); margin-top: 1px; }
   .gi-variant-name { font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gi-expand { font-size: 10px; color: var(--text3); margin-left: auto; padding: 0 4px; }
@@ -567,9 +569,8 @@ function renderGameItem(list, g, idx) {
     iconHTML = esc(g.icon || '🎮');
   }
 
-  const badge = g.locked ? '<div class="badge badge-locked">Locked</div>' : (g.wip ? '<div class="badge badge-wip">WIP</div>' : '');
-  var sizeBadge = sizeBadgeHTML(g.size);
-  el.innerHTML = badge + sizeBadge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(g.title||'Untitled')+'</div></div>';
+  var combinedBadge = combinedBadgeHTML(g);
+  el.innerHTML = combinedBadge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(g.title||'Untitled')+'</div></div>';
   el.onclick = () => { if (!g.locked || IS_LOCAL) selectGame(idx); };
   list.appendChild(el);
 }
@@ -594,9 +595,6 @@ function renderGroupItem(list, groupKey, groupGames) {
     iconHTML = esc(first.icon || '🎮');
   }
 
-  // Total size for group header
-  var groupSize = 0;
-  groupGames.forEach(function(gg){ if (gg.size) groupSize += gg.size; });
   var groupBadge = sizeBadgeHTML(groupSize);
 
   header.innerHTML = groupBadge + '<div class="gi-icon">'+iconHTML+'</div><div class="gi-meta"><div class="gi-name">'+esc(groupTitle)+'</div></div><div class="gi-expand">'+(isOpen ? '▲' : '▼')+'</div>';
@@ -616,7 +614,7 @@ function renderGroupItem(list, groupKey, groupGames) {
     vi.className = 'gi-variant-item' + (g.locked && !IS_LOCAL ? ' locked' : '');
     if (currentIdx === originalIdx) vi.classList.add('active');
     const branch = gi === groupGames.length - 1 ? '└─' : '├─';
-    var viBadge = sizeBadgeHTML(g.size);
+    var viBadge = combinedBadgeHTML(g);
     vi.innerHTML = viBadge + '<span class="gi-variant-branch">' + branch + '</span><span class="gi-variant-name">' + esc(g.variant || g.title) + '</span>';
     vi.onclick = (e) => { e.stopPropagation(); if (!g.locked || IS_LOCAL) selectGame(originalIdx); };
     vlist.appendChild(vi);
@@ -630,6 +628,23 @@ function sizeBadgeHTML(bytes) {
   var label = mb >= 100 ? (mb/1000).toFixed(1)+'GB' : mb.toFixed(1)+'MB';
   var cls = mb < 10 ? 'badge-size-s' : (mb < 50 ? 'badge-size-m' : 'badge-size-l');
   return '<div class="badge-size ' + cls + '">' + label + '</div>';
+}
+
+function combinedBadgeHTML(g) {
+  var label = '', cls = '';
+  if (g.locked) { label = 'Locked'; cls = 'badge-locked'; }
+  else if (g.wip) { label = 'WIP'; cls = 'badge-wip'; }
+  var sizeStr = '';
+  if (g.size > 0) {
+    var mb = g.size / 1048576;
+    sizeStr = mb >= 100 ? (mb/1000).toFixed(1)+'GB' : mb.toFixed(1)+'MB';
+    if (!cls) cls = mb < 10 ? 'badge-size-s' : (mb < 50 ? 'badge-size-m' : 'badge-size-l');
+    else cls += ' badge-combo';
+  }
+  if (label && sizeStr) return '<div class="badge-size ' + cls + '">' + label + '<span class="bc-sep">/</span>' + sizeStr + '</div>';
+  if (sizeStr) return '<div class="badge-size ' + cls + '">' + sizeStr + '</div>';
+  if (label) return '<div class="badge badge-' + (g.locked?'locked':'wip') + '">' + label + '</div>';
+  return '';
 }
 
 function filterGames() {
@@ -687,10 +702,9 @@ function renderGrid(filteredGames) {
     } else {
       iconHTML = esc(g.icon || '🎮');
     }
-    const badge = g.locked ? '<div class="badge badge-locked">&#x1F512;</div>' : (g.wip ? '<div class="badge badge-wip">WIP</div>' : '');
-    const sizeBadge = sizeBadgeHTML(g.size);
+    const combinedBadge = combinedBadgeHTML(g);
     const sub = g.variant || g.tag || '';
-    card.innerHTML = badge + sizeBadge + '<div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(g.title||'Untitled')+'</div>'+(sub?'<div class="gc-sub">'+esc(sub)+'</div>':'')+'</div>';
+    card.innerHTML = combinedBadge + '<div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(g.title||'Untitled')+'</div>'+(sub?'<div class="gc-sub">'+esc(sub)+'</div>':'')+'</div>';
     card.onclick = () => { if (!g.locked || IS_LOCAL) selectGame(idx); };
     grid.appendChild(card);
   });
