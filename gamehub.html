@@ -64,9 +64,8 @@
   .tb-btn.primary { border-color: var(--blue-dim); color: var(--blue); }
 
   .layout { display: flex; flex: 1; overflow: hidden; }
-  #sidebar { width: 240px; background: var(--bg1); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
-  #sidebar-title { height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--line); color: var(--text2); font-size: 11px; text-transform: uppercase; }
-  #game-list { flex: 1; overflow-y: auto; }
+  #sidebar { width: 40px; background: var(--bg1); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items:center; padding-top:8px; }
+  #sidebar-title { display:none; }
   .game-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; border-left: 3px solid transparent; position: relative; transition: transform .2s ease, box-shadow .2s ease, filter .2s ease, opacity .2s ease, border-left-color .2s ease, background .15s ease; }
   .game-item:hover { background: var(--bg2); }
   .game-item.active { background: var(--bg2); border-left-color: var(--blue); }
@@ -115,6 +114,14 @@
   @keyframes gc-spin { to { transform:rotate(360deg); } }
   .grid-card .gc-variant-count { position:absolute; top:6px; left:6px; background:var(--blue-dim); color:var(--blue); font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; line-height:14px; }
   .grid-card .gc-expand { position:absolute; bottom:6px; left:6px; font-size:10px; color:var(--text3); padding:2px 4px; }
+  #variant-popup { display:flex; flex-direction:column; gap:6px; min-width:200px; max-height:320px; }
+  .vp-card { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; transition:background .1s; }
+  .vp-card:hover { background:var(--bg2); }
+  .vp-card .vp-icon { width:32px; height:32px; border-radius:4px; background:var(--bg3); display:flex; align-items:center; justify-content:center; font-size:16px; overflow:hidden; flex-shrink:0; }
+  .vp-card .vp-icon img { width:100%; height:100%; object-fit:cover; }
+  .vp-card .vp-meta { flex:1; min-width:0; }
+  .vp-card .vp-title { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vp-card .vp-sub { font-size:10px; color:var(--text2); }
   #grid-wrap.compact .grid-card .gc-icon { aspect-ratio:4/3; }
   #grid-wrap.compact .grid-card .gc-body { padding:6px 8px; gap:2px; }
   #grid-wrap.compact .grid-card .gc-title { font-size:11px; }
@@ -269,15 +276,7 @@
 
 <div class="layout">
   <div id="sidebar">
-    <div id="sidebar-title">Library <span id="game-count"></span>
-      <div id="sync-status" style="display:none; font-size:10px; color:var(--text3);"></div>
-      <button id="settings-btn" onclick="toggleSettings()" title="Settings" style="margin-left:auto;background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px;">&#x2699;</button>
-    </div>
-    <div style="padding: 6px 10px; border-bottom: 1px solid var(--line);">
-      <input type="text" id="search-input" placeholder="Search games..." style="width: 100%; height: 28px; background: var(--bg0); border: 1px solid var(--line2); border-radius: 3px; color: var(--text); padding: 0 8px; outline: none; font-size: 12px;" oninput="filterGames()" />
-      <button id="sync-btn" onclick="syncDropbox()" style="display:none; width:100%; margin-top:6px; height:28px; padding:0 8px; background:var(--blue-dim); border:1px solid var(--blue); border-radius:3px; color:var(--blue); cursor:pointer; font-size:11px;">&#x21bb; Sync from Dropbox</button>
-      <button id="editor-btn" onclick="toggleEditor()" style="display:none; width:100%; margin-top:4px; height:28px; padding:0 8px; background:var(--green-dim); border:1px solid var(--green); border-radius:3px; color:var(--green); cursor:pointer; font-size:11px;">&#x270E; Edit Games</button>
-    </div>
+    <button id="settings-btn" onclick="toggleSettings()" title="Settings" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;">&#x2699;</button>
   </div>
     <div id="main">
       <div id="game-bar">
@@ -289,11 +288,12 @@
         <button class="tb-btn" onclick="showGrid()">&#x21A9; Browse</button>
       </div>
       <div id="grid-toolbar">
-        <span id="grid-count" style="font-size:11px;color:var(--text3);"></span>
-        <div class="gt-spacer"></div>
+        <input type="text" id="search-input" placeholder="Search games..." style="height:28px;flex:1;max-width:280px;background:var(--bg0);border:1px solid var(--line2);border-radius:4px;color:var(--text);padding:0 10px;outline:none;font-size:12px;" oninput="filterGames()" />
+        <span id="grid-count" style="font-size:11px;color:var(--text3);margin-left:auto;"></span>
         <button class="gt-btn" onclick="refreshGames()">&#x21bb; Refresh</button>
         <button class="gt-btn" onclick="toggleSettings()">&#x2699; Settings</button>
       </div>
+      <div id="variant-popup" style="display:none;position:fixed;z-index:100;background:var(--bg1);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);padding:10px;overflow-y:auto;"></div>
       <div id="frame-wrap">
         <div id="overlay">
           <div id="ov-icon" style="font-size:30px;">🎮</div>
@@ -762,21 +762,18 @@ function renderGrid(filteredGames) {
   const grid = document.getElementById('grid-wrap'); grid.innerHTML = '';
   const displayGames = filteredGames || games;
   document.getElementById('grid-count').textContent = displayGames.length + ' games';
+  closeVariantPopup();
 
   var groups = {};
   displayGames.forEach(function(g){ var k = g.group || ''; if (!groups[k]) groups[k] = []; groups[k].push(g); });
-  var expandedGroupsSet = expandedGroups;
 
   Object.entries(groups).forEach(function(e){
     var groupKey = e[0], groupGames = e[1];
     if (!groupKey || groupGames.length === 1) {
       groupGames.forEach(function(g){
-        var idx = games.indexOf(g);
-        var card = gridCardHTML(g, idx);
-        grid.appendChild(card);
+        grid.appendChild(gridCardHTML(g, games.indexOf(g)));
       });
     } else {
-      var isOpen = expandedGroupsSet.has(groupKey);
       var first = groupGames[0];
       var groupTitle = first.group_title || groupKey.replace(/[-_]/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
       var totalSize = 0;
@@ -786,26 +783,48 @@ function renderGrid(filteredGames) {
       var iconHTML, iconUrl = normalizeDropbox(first.icon);
       if (first.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) { iconHTML = '<img src="'+esc(iconUrl)+'" onerror="this.parentNode.textContent=\'🎮\'">'; }
       else { iconHTML = esc(first.icon || '🎮'); }
-      header.innerHTML = '<div class="badge-size badge-size-s">'+groupGames.length+' variants</div><div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(groupTitle)+'</div><div class="gc-sub">'+esc(totalSize > 0 ? formatBytes(totalSize) : '')+'</div></div><div class="gc-expand">'+(isOpen?'▲ Hide':'▼ Show variants')+'</div>';
-      header.onclick = function(){
-        if (expandedGroupsSet.has(groupKey)) expandedGroupsSet.delete(groupKey);
-        else expandedGroupsSet.add(groupKey);
-        renderGrid(filteredGames || games);
+      var sizeLabel = totalSize > 0 ? formatBytes(totalSize) : '';
+      header.innerHTML = '<div class="badge-size badge-size-s">'+groupGames.length+'</div><div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(groupTitle)+'</div><div class="gc-sub">'+esc(sizeLabel)+'</div></div><div class="gc-expand">&#x25BE; variants</div>';
+      header.onclick = function(e){
+        showVariantPopup(groupGames, header);
+        e.stopPropagation();
       };
       grid.appendChild(header);
-
-      if (isOpen) {
-        groupGames.forEach(function(g){
-          var idx = games.indexOf(g);
-          var card = gridCardHTML(g, idx);
-          card.style.marginLeft = '20px';
-          card.style.borderLeft = '2px solid var(--blue-dim)';
-          grid.appendChild(card);
-        });
-      }
     }
   });
 }
+
+function showVariantPopup(groupGames, anchor) {
+  closeVariantPopup();
+  var popup = document.getElementById('variant-popup');
+  popup.innerHTML = '';
+  popup.style.display = 'flex';
+  groupGames.forEach(function(g){
+    var idx = games.indexOf(g);
+    var item = document.createElement('div');
+    item.className = 'vp-card';
+    var iconHTML, iconUrl = normalizeDropbox(g.icon);
+    if (g.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) { iconHTML = '<img src="'+esc(iconUrl)+'" onerror="this.parentNode.textContent=\'🎮\'">'; }
+    else { iconHTML = esc(g.icon || '🎮'); }
+    var sub = g.variant || g.tag || '';
+    item.innerHTML = '<div class="vp-icon">'+iconHTML+'</div><div class="vp-meta"><div class="vp-title">'+esc(g.title||'')+'</div>'+(sub?'<div class="vp-sub">'+esc(sub)+'</div>':'')+'</div>'+combinedBadgeHTML(g);
+    item.onclick = function(){ if (!g.locked || IS_LOCAL) { closeVariantPopup(); selectGame(idx); } };
+    popup.appendChild(item);
+  });
+
+  var rect = anchor.getBoundingClientRect();
+  var left = Math.min(rect.left, window.innerWidth - 240);
+  var top = rect.bottom + 4;
+  if (top + popup.offsetHeight > window.innerHeight) top = rect.top - popup.offsetHeight - 4;
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+
+function closeVariantPopup() {
+  var popup = document.getElementById('variant-popup');
+  if (popup) popup.style.display = 'none';
+}
+document.addEventListener('click', function(e){ if (!e.target.closest('#variant-popup') && !e.target.closest('.gc-group')) closeVariantPopup(); });
 
 function gridCardHTML(g, idx) {
   var card = document.createElement('div');
