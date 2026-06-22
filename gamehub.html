@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
+  :root, [data-theme="dark"] {
     --bg0: #141414; --bg1: #1c1c1c; --bg2: #242424; --bg3: #2e2e2e;
     --line: #333; --line2: #3d3d3d;
     --text: #e0e0e0; --text2: #999; --text3: #555;
@@ -18,6 +18,13 @@
     --green: #4caf6e; --red: #c0392b; --yellow: #d4a94a;
     --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --mono: 'SF Mono', 'Consolas', 'Menlo', monospace;
+  }
+  [data-theme="light"] {
+    --bg0: #f5f5f5; --bg1: #ffffff; --bg2: #e8e8e8; --bg3: #d0d0d0;
+    --line: #ccc; --line2: #bbb;
+    --text: #1a1a1a; --text2: #555; --text3: #888;
+    --blue: #2563eb; --blue-dim: #bfdbfe;
+    --green: #16a34a; --red: #dc2626; --yellow: #ca8a04;
   }
   html, body { height: 100%; overflow: hidden; background: var(--bg0); color: var(--text); font-family: var(--font); font-size: 13px; }
   body { display: flex; flex-direction: column; }
@@ -84,6 +91,12 @@
   .grid-card .gc-sub { font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .grid-card .badge-size { position:absolute; top:6px; right:6px; bottom:auto; }
   .grid-card .badge { position:absolute; top:6px; left:6px; }
+  #grid-wrap.compact .grid-card .gc-icon { aspect-ratio:4/3; }
+  #grid-wrap.compact .grid-card .gc-body { padding:6px 8px; gap:2px; }
+  #grid-wrap.compact .grid-card .gc-title { font-size:11px; }
+  #grid-wrap.compact .grid-card .gc-sub { font-size:10px; }
+  #grid-wrap.compact.grid-view { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; padding:10px; }
+  #grid-wrap.compact.fullgrid-view { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; padding:14px; }
   .fullgrid-active #sidebar { display:none; }
   .fullgrid-active .layout #main { margin:0; }
 
@@ -233,13 +246,14 @@
   <div id="sidebar">
     <div id="sidebar-title">Library <span id="game-count"></span>
       <div id="sync-status" style="display:none; font-size:10px; color:var(--text3);"></div>
+      <button id="settings-btn" onclick="toggleSettings()" title="Settings" style="margin-left:auto;background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px;">&#x2699;</button>
     </div>
     <div style="padding: 6px 10px; border-bottom: 1px solid var(--line);">
       <input type="text" id="search-input" placeholder="Search games..." style="width: 100%; height: 28px; background: var(--bg0); border: 1px solid var(--line2); border-radius: 3px; color: var(--text); padding: 0 8px; outline: none; font-size: 12px;" oninput="filterGames()" />
       <div id="view-bar" style="display:flex; gap:3px; margin-top:6px;">
-        <button class="view-btn active" data-view="list" onclick="setView('list')" title="List">☰</button>
+        <button class="view-btn" data-view="list" onclick="setView('list')" title="List">☰</button>
         <button class="view-btn" data-view="grid" onclick="setView('grid')" title="Grid">▦</button>
-        <button class="view-btn" data-view="fullgrid" onclick="setView('fullgrid')" title="Fullscreen Grid">⊞</button>
+        <button class="view-btn active" data-view="fullgrid" onclick="setView('fullgrid')" title="Fullscreen Grid">⊞</button>
       </div>
       <button id="sync-btn" onclick="syncDropbox()" style="display:none; width:100%; margin-top:6px; height:28px; padding:0 8px; background:var(--blue-dim); border:1px solid var(--blue); border-radius:3px; color:var(--blue); cursor:pointer; font-size:11px;">&#x21bb; Sync from Dropbox</button>
       <button id="editor-btn" onclick="toggleEditor()" style="display:none; width:100%; margin-top:4px; height:28px; padding:0 8px; background:var(--green-dim); border:1px solid var(--green); border-radius:3px; color:var(--green); cursor:pointer; font-size:11px;">&#x270E; Edit Games</button>
@@ -284,6 +298,27 @@
   </div>
 </div>
 
+<!-- Settings overlay -->
+<div id="settings-overlay">
+  <div id="settings-box">
+    <div id="settings-topbar"><span class="logo">&#x2699; Settings</span><button id="settings-close" onclick="toggleSettings()">&#x2715; Close</button></div>
+    <div id="settings-body">
+      <div class="setting-row">
+        <div class="setting-left"><div class="setting-label">Light Mode</div><div class="setting-desc">Switch between dark and light theme</div></div>
+        <div class="setting-toggle" id="st-light" onclick="toggleSetting('light')"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-left"><div class="setting-label">Compact Cards</div><div class="setting-desc">Smaller grid cards for more content</div></div>
+        <div class="setting-toggle" id="st-compact" onclick="toggleSetting('compact')"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-left"><div class="setting-label">Show Stable Badge</div><div class="setting-desc">Show &quot;Stable&quot; on games without issues</div></div>
+        <div class="setting-toggle on" id="st-stable" onclick="toggleSetting('stable')"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Usage overlay -->
 <div id="usage-overlay">
   <div id="usage-box">
@@ -302,6 +337,22 @@
 </div>
 
 <style>
+#settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1900; }
+#settings-overlay.active { display: flex; }
+#settings-box { background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; width: 380px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+#settings-topbar { height: 38px; display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); gap: 8px; }
+#settings-topbar .logo { font-size: 12px; font-weight: 600; }
+#settings-close { margin-left: auto; height: 24px; padding: 0 8px; background: transparent; border: 1px solid var(--line2); border-radius: 3px; color: var(--text3); cursor: pointer; font-size: 11px; }
+#settings-close:hover { border-color: var(--text2); color: var(--text); }
+#settings-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.setting-label { font-size: 12px; color: var(--text); }
+.setting-desc { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.setting-left { display: flex; flex-direction: column; gap: 1px; }
+.setting-toggle { position: relative; width: 36px; height: 20px; background: var(--bg3); border-radius: 10px; cursor: pointer; border: 1px solid var(--line2); transition: background .15s; flex-shrink: 0; }
+.setting-toggle.on { background: var(--blue-dim); border-color: var(--blue); }
+.setting-toggle::after { content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; background:var(--text3); border-radius:50%; transition:transform .15s,background .15s; }
+.setting-toggle.on::after { transform:translateX(16px); background:var(--blue); }
 #usage-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1800; }
 #usage-overlay.active { display: flex; }
 #usage-box { background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; width: 400px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -491,7 +542,10 @@ if (IS_LOCAL) {
 const DEFAULT_URL = 'games.json';
 let games = [], currentIdx = -1, resources = [];
 let editorGames = [], editorSel = -1, editorActive = false, editorFromDropbox = false;
-let viewMode = 'list';
+let viewMode = 'fullgrid';
+let settings = { light: false, compact: false, stable: true };
+try { Object.assign(settings, JSON.parse(localStorage.getItem('ghub_settings') || '{}')); } catch(e) {}
+applySettings();
 
 function normalizeDropbox(u) {
   if(!u || typeof u !== 'string') return u;
@@ -521,6 +575,7 @@ async function loadURL() {
     document.getElementById('game-bar').style.display = 'flex';
     document.getElementById('frame-wrap').style.display = 'block';
     setStatus('ok', 'Loaded ' + games.length + ' games');
+    setView(viewMode);
   } catch(e) { setStatus('err', 'Load failed'); }
 }
 
@@ -644,7 +699,9 @@ function combinedBadgeHTML(g) {
   if (label && sizeStr) return '<div class="badge-size ' + cls + '">' + label + '<span class="bc-sep">/</span>' + sizeStr + '</div>';
   if (sizeStr) return '<div class="badge-size ' + cls + '">' + sizeStr + '</div>';
   if (label) return '<div class="badge badge-' + (g.locked?'locked':'wip') + '">' + label + '</div>';
-  return '';
+  if (!settings.stable) return '';
+  if (g.size > 0) return '<div class="badge-size badge-size-s">Stable</div>';
+  return '<div class="badge badge-locked" style="background:var(--green);color:#000;">Stable</div>';
 }
 
 function filterGames() {
@@ -1705,6 +1762,27 @@ function refreshGames() {
   loadURL();
 }
 function clearCache() { indexedDB.deleteDatabase('GHubCache'); location.reload(); }
+
+function toggleSettings() { document.getElementById('settings-overlay').classList.toggle('active'); }
+
+function toggleSetting(key) {
+  if (key === 'light') settings.light = !settings.light;
+  else if (key === 'compact') settings.compact = !settings.compact;
+  else if (key === 'stable') settings.stable = !settings.stable;
+  document.getElementById('st-' + key).classList.toggle('on', settings[key]);
+  applySettings();
+  try { localStorage.setItem('ghub_settings', JSON.stringify(settings)); } catch(e) {}
+  if (key === 'compact' && games.length) renderGrid(games);
+}
+
+function applySettings() {
+  document.documentElement.setAttribute('data-theme', settings.light ? 'light' : 'dark');
+  document.getElementById('st-light').classList.toggle('on', settings.light);
+  document.getElementById('st-compact').classList.toggle('on', settings.compact);
+  document.getElementById('st-stable').classList.toggle('on', settings.stable);
+  var gw = document.getElementById('grid-wrap');
+  if (gw) gw.classList.toggle('compact', settings.compact);
+}
 
 function formatBytes(b) {
   if (!b || b === 0) return '0 B';
@@ -2858,6 +2936,7 @@ if (window.location.protocol === 'file:' && !IS_LOCAL && typeof LOCAL_GAMES !== 
   document.getElementById('game-bar').style.display = 'flex';
   document.getElementById('frame-wrap').style.display = 'block';
   setStatus('ok', 'Loaded ' + games.length + ' local games \u26a0\ufe0f file://');
+  setView(viewMode);
 } else if (window.location.protocol === 'file:' && !IS_LOCAL && DEFAULT_URL) {
   setStatus('loading', 'No local games, fetching from Dropbox...');
   document.getElementById('url-input').value = DEFAULT_URL;
