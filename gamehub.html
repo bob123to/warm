@@ -897,7 +897,7 @@ async function launchGame(g) {
   const grid = document.getElementById('grid-wrap');
   grid.style.display = 'none';
   document.getElementById('grid-toolbar').style.display = 'none';
-  wrap.style.display = '';
+  wrap.style.display = 'block';
   document.getElementById('game-bar').style.display = 'flex';
   let frame = document.getElementById('game-frame');
   if (frame) { frame.srcdoc = ''; frame.remove(); }
