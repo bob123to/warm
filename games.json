@@ -282,6 +282,7 @@
     "tag": "Rhythm",
     "type": "zip",
     "icon": "thumbnails/geometry-dash.png",
+    "wip": true,
     "size": 42583408
   },
   {
@@ -290,6 +291,7 @@
     "tag": "Racing",
     "type": "zip",
     "icon": "thumbnails/polytrack.png",
+    "locked": true,
     "size": 4928705
   }
 ]
