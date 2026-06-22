@@ -26,6 +26,34 @@
     --blue: #2563eb; --blue-dim: #bfdbfe;
     --green: #16a34a; --red: #dc2626; --yellow: #ca8a04;
   }
+  [data-theme="midnight"] {
+    --bg0: #0a0e1a; --bg1: #111827; --bg2: #1c2538; --bg3: #28334a;
+    --line: #334155; --line2: #475569;
+    --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+    --blue: #60a5fa; --blue-dim: #1e3a5f;
+    --green: #34d399; --red: #f87171; --yellow: #fbbf24;
+  }
+  [data-theme="forest"] {
+    --bg0: #0f1a12; --bg1: #16231a; --bg2: #1e2f23; --bg3: #2a3f30;
+    --line: #3d5a3d; --line2: #4a6b4a;
+    --text: #d4edda; --text2: #8bba94; --text3: #5a8a63;
+    --blue: #4fc3f7; --blue-dim: #1a4a5c;
+    --green: #66bb6a; --red: #ef5350; --yellow: #ffd54f;
+  }
+  [data-theme="ocean"] {
+    --bg0: #0c141f; --bg1: #142130; --bg2: #1c2d42; --bg3: #253b54;
+    --line: #2e4a6a; --line2: #3a5c80;
+    --text: #d4e6f5; --text2: #8ab4d4; --text3: #5a8aaa;
+    --blue: #42a5f5; --blue-dim: #1a3d6e;
+    --green: #66bb6a; --red: #ef5350; --yellow: #ffd54f;
+  }
+  [data-theme="sunset"] {
+    --bg0: #1a0f0e; --bg1: #2a1613; --bg2: #3a1f1a; --bg3: #4d2a23;
+    --line: #6b3a30; --line2: #804a3e;
+    --text: #f0d4cc; --text2: #c49080; --text3: #a06050;
+    --blue: #ff8a65; --blue-dim: #6b3a30;
+    --green: #a5d6a7; --red: #ef5350; --yellow: #ffcc80;
+  }
   html, body { height: 100%; overflow: hidden; background: var(--bg0); color: var(--text); font-family: var(--font); font-size: 13px; }
   body { display: flex; flex-direction: column; }
 
@@ -71,6 +99,7 @@
   /* Grid view */
   #grid-wrap { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; padding:20px; overflow-y:auto; align-content:start; }
   .grid-card { background:var(--bg1); border:1px solid var(--line); border-radius:8px; overflow:hidden; cursor:pointer; transition:transform .15s,border-color .15s,box-shadow .15s; display:flex; flex-direction:column; position:relative; }
+  .grid-card.gc-group { border-style:dashed; }
   .grid-card:hover { transform:translateY(-3px); border-color:var(--blue-dim); box-shadow:0 4px 16px rgba(0,0,0,0.3); }
   .grid-card:active { transform:translateY(-1px); }
   .grid-card.locked { opacity:0.5; cursor:not-allowed; }
@@ -82,6 +111,10 @@
   .grid-card .gc-sub { font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .grid-card .badge-size { position:absolute; top:6px; right:6px; bottom:auto; }
   .grid-card .badge { position:absolute; top:6px; left:6px; }
+  .grid-card.loading::after { content:''; position:absolute; bottom:8px; left:8px; width:14px; height:14px; border:2px solid var(--text3); border-top-color:var(--blue); border-radius:50%; animation:gc-spin .6s linear infinite; }
+  @keyframes gc-spin { to { transform:rotate(360deg); } }
+  .grid-card .gc-variant-count { position:absolute; top:6px; left:6px; background:var(--blue-dim); color:var(--blue); font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; line-height:14px; }
+  .grid-card .gc-expand { position:absolute; bottom:6px; left:6px; font-size:10px; color:var(--text3); padding:2px 4px; }
   #grid-wrap.compact .grid-card .gc-icon { aspect-ratio:4/3; }
   #grid-wrap.compact .grid-card .gc-body { padding:6px 8px; gap:2px; }
   #grid-wrap.compact .grid-card .gc-title { font-size:11px; }
@@ -245,7 +278,6 @@
       <button id="sync-btn" onclick="syncDropbox()" style="display:none; width:100%; margin-top:6px; height:28px; padding:0 8px; background:var(--blue-dim); border:1px solid var(--blue); border-radius:3px; color:var(--blue); cursor:pointer; font-size:11px;">&#x21bb; Sync from Dropbox</button>
       <button id="editor-btn" onclick="toggleEditor()" style="display:none; width:100%; margin-top:4px; height:28px; padding:0 8px; background:var(--green-dim); border:1px solid var(--green); border-radius:3px; color:var(--green); cursor:pointer; font-size:11px;">&#x270E; Edit Games</button>
     </div>
-    <div id="game-list"></div>
   </div>
     <div id="main">
       <div id="game-bar">
@@ -307,6 +339,17 @@
         <div class="setting-left"><div class="setting-label">Show Stable Badge</div><div class="setting-desc">Show &quot;Stable&quot; on games without issues</div></div>
         <div class="setting-toggle on" id="st-stable" onclick="toggleSetting('stable')"></div>
       </div>
+      <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+        <div class="setting-left"><div class="setting-label">Theme</div><div class="setting-desc">Choose a color scheme</div></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;" id="theme-options">
+          <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')">Dark</button>
+          <button class="theme-btn" data-theme="light" onclick="setTheme('light')">Light</button>
+          <button class="theme-btn" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+          <button class="theme-btn" data-theme="forest" onclick="setTheme('forest')">Forest</button>
+          <button class="theme-btn" data-theme="ocean" onclick="setTheme('ocean')">Ocean</button>
+          <button class="theme-btn" data-theme="sunset" onclick="setTheme('sunset')">Sunset</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -345,6 +388,9 @@
 .setting-toggle.on { background: var(--blue-dim); border-color: var(--blue); }
 .setting-toggle::after { content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; background:var(--text3); border-radius:50%; transition:transform .15s,background .15s; }
 .setting-toggle.on::after { transform:translateX(16px); background:var(--blue); }
+.theme-btn { height:26px; padding:0 10px; background:var(--bg0); border:1px solid var(--line2); border-radius:4px; color:var(--text2); cursor:pointer; font-size:11px; transition:border-color .1s; }
+.theme-btn:hover { border-color:var(--blue); color:var(--text); }
+.theme-btn.active { background:var(--blue-dim); border-color:var(--blue); color:var(--blue); }
 #usage-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1800; }
 #usage-overlay.active { display: flex; }
 #usage-box { background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; width: 400px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -562,7 +608,7 @@ async function loadURL() {
     const cacheBust = url.includes('?') ? '&_t=' : '?_t=';
     const r = await fetch(url + cacheBust + Date.now());
     games = await r.json();
-    renderSidebar();
+    renderGrid();
     document.getElementById('game-bar').style.display = 'none';
     document.getElementById('grid-toolbar').style.display = '';
     document.getElementById('frame-wrap').style.display = 'none';
@@ -698,7 +744,7 @@ function combinedBadgeHTML(g) {
 function filterGames() {
   const query = document.getElementById('search-input').value.toLowerCase();
   const filtered = games.filter(g => (g.title || '').toLowerCase().includes(query));
-  renderSidebar(filtered);
+  renderGrid(filtered);
 }
 
 function showGrid() {
@@ -716,31 +762,73 @@ function renderGrid(filteredGames) {
   const grid = document.getElementById('grid-wrap'); grid.innerHTML = '';
   const displayGames = filteredGames || games;
   document.getElementById('grid-count').textContent = displayGames.length + ' games';
-  displayGames.forEach(g => {
-    const idx = games.indexOf(g);
-    const card = document.createElement('div');
-    card.className = 'grid-card' + (g.locked && !IS_LOCAL ? ' locked' : '');
-    let iconHTML;
-    const iconUrl = normalizeDropbox(g.icon);
-    if (g.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) {
-      iconHTML = `<img src="${esc(iconUrl)}" onerror="this.parentNode.textContent='🎮'">`;
+
+  var groups = {};
+  displayGames.forEach(function(g){ var k = g.group || ''; if (!groups[k]) groups[k] = []; groups[k].push(g); });
+  var expandedGroupsSet = expandedGroups;
+
+  Object.entries(groups).forEach(function(e){
+    var groupKey = e[0], groupGames = e[1];
+    if (!groupKey || groupGames.length === 1) {
+      groupGames.forEach(function(g){
+        var idx = games.indexOf(g);
+        var card = gridCardHTML(g, idx);
+        grid.appendChild(card);
+      });
     } else {
-      iconHTML = esc(g.icon || '🎮');
+      var isOpen = expandedGroupsSet.has(groupKey);
+      var first = groupGames[0];
+      var groupTitle = first.group_title || groupKey.replace(/[-_]/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+      var totalSize = 0;
+      groupGames.forEach(function(gg){ if (gg.size) totalSize += gg.size; });
+      var header = document.createElement('div');
+      header.className = 'grid-card gc-group';
+      var iconHTML, iconUrl = normalizeDropbox(first.icon);
+      if (first.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) { iconHTML = '<img src="'+esc(iconUrl)+'" onerror="this.parentNode.textContent=\'🎮\'">'; }
+      else { iconHTML = esc(first.icon || '🎮'); }
+      header.innerHTML = '<div class="badge-size badge-size-s">'+groupGames.length+' variants</div><div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(groupTitle)+'</div><div class="gc-sub">'+esc(totalSize > 0 ? formatBytes(totalSize) : '')+'</div></div><div class="gc-expand">'+(isOpen?'▲ Hide':'▼ Show variants')+'</div>';
+      header.onclick = function(){
+        if (expandedGroupsSet.has(groupKey)) expandedGroupsSet.delete(groupKey);
+        else expandedGroupsSet.add(groupKey);
+        renderGrid(filteredGames || games);
+      };
+      grid.appendChild(header);
+
+      if (isOpen) {
+        groupGames.forEach(function(g){
+          var idx = games.indexOf(g);
+          var card = gridCardHTML(g, idx);
+          card.style.marginLeft = '20px';
+          card.style.borderLeft = '2px solid var(--blue-dim)';
+          grid.appendChild(card);
+        });
+      }
     }
-    const combinedBadge = combinedBadgeHTML(g);
-    const sub = g.variant || g.tag || '';
-    card.innerHTML = combinedBadge + '<div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(g.title||'Untitled')+'</div>'+(sub?'<div class="gc-sub">'+esc(sub)+'</div>':'')+'</div>';
-    card.onclick = () => { if (!g.locked || IS_LOCAL) selectGame(idx); };
-    grid.appendChild(card);
   });
+}
+
+function gridCardHTML(g, idx) {
+  var card = document.createElement('div');
+  card.className = 'grid-card' + (g.locked && !IS_LOCAL ? ' locked' : '');
+  if (currentIdx === idx) card.classList.add('loading');
+  var iconHTML, iconUrl = normalizeDropbox(g.icon);
+  if (g.icon && (iconUrl.startsWith('http') || iconUrl.includes('.'))) { iconHTML = '<img src="'+esc(iconUrl)+'" onerror="this.parentNode.textContent=\'🎮\'">'; }
+  else { iconHTML = esc(g.icon || '🎮'); }
+  var bdg = combinedBadgeHTML(g);
+  var sub = g.variant || g.tag || '';
+  card.innerHTML = bdg + '<div class="gc-icon">'+iconHTML+'</div><div class="gc-body"><div class="gc-title">'+esc(g.title||'Untitled')+'</div>'+(sub?'<div class="gc-sub">'+esc(sub)+'</div>':'')+'</div>';
+  card.onclick = function(){ if (!g.locked || IS_LOCAL) selectGame(idx); };
+  return card;
 }
 
 function selectGame(i) {
   currentIdx = i;
   addonGameIdx = i;
-  renderSidebar();
-  const g = games[i];
+  var g = games[i];
   document.getElementById('addons-btn').style.display = (g.addons && g.addons.length) ? '' : 'none';
+  document.querySelectorAll('.grid-card.loading').forEach(function(c){ c.classList.remove('loading'); });
+  var cards = document.querySelectorAll('.grid-card');
+  if (cards[i] && cards[i].parentNode) cards[i].classList.add('loading');
   launchGame(g);
 }
 
@@ -812,28 +900,30 @@ async function launchGame(g) {
     }
 
     showOverlay('loading', g);
-    const knownSize = g.size || 0;
+    var knownSize = g.size || 0;
     if (knownSize) document.getElementById('ov-body').textContent = 'Downloading ' + formatBytes(knownSize) + '...';
-    const r = await fetch(normalizeDropbox(g.url));
+    var r = await fetch(normalizeDropbox(g.url));
     if (!r.ok) throw new Error("HTTP " + r.status);
-    const totalSize = knownSize || parseInt(r.headers.get('Content-Length')) || 0;
-    const sizeStr = totalSize > 0 ? formatBytes(totalSize) : '?';
+    var totalSize = parseInt(r.headers.get('Content-Length')) || 0;
+    var sizeStr = totalSize > 0 ? formatBytes(totalSize) : (knownSize > 0 ? formatBytes(knownSize) : '?');
     document.getElementById('ov-body').textContent = 'Downloading 0 / ' + sizeStr;
     document.getElementById('progress-wrap').style.display = 'block';
     updateProgress(0);
-    let loaded = 0;
-    const reader = r.body.getReader();
-    const chunks = [];
+    var loaded = 0;
+    var reader = r.body.getReader();
+    var chunks = [];
     while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      loaded += value.length;
-      const pct = totalSize > 0 ? Math.round((loaded / totalSize) * 100) : 0;
+      var d = await reader.read();
+      if (d.done) break;
+      chunks.push(d.value);
+      loaded += d.value.length;
+      var pct = totalSize > 0 ? Math.min(99, Math.round((loaded / totalSize) * 100)) : 0;
       updateProgress(pct);
       document.getElementById('ov-body').textContent = 'Downloading ' + formatBytes(loaded) + ' / ' + sizeStr;
     }
-    let data = new Uint8Array(loaded);
+    updateProgress(100);
+    document.getElementById('ov-body').textContent = 'Processing...';
+    var data = new Uint8Array(loaded);
     let pos = 0;
     for (const c of chunks) { data.set(c, pos); pos += c.length; }
     data = data.buffer;
@@ -866,7 +956,8 @@ async function launchGame(g) {
       const files = Object.entries(zip.files).filter(f => !f[1].dir);
       const total = files.length;
       
-      updateProgress(0);
+      document.getElementById('progress-wrap').style.display = 'none';
+      hideOverlay();
       document.getElementById('progress-wrap').style.display = 'block';
 
       for (let i = 0; i < total; i++) {
@@ -1742,13 +1833,21 @@ function toggleSetting(key) {
   if (key === 'compact' && games.length) renderGrid(games);
 }
 
+function setTheme(theme) {
+  settings.theme = theme;
+  document.querySelectorAll('.theme-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.theme === theme); });
+  applySettings();
+  try { localStorage.setItem('ghub_settings', JSON.stringify(settings)); } catch(e) {}
+}
+
 function applySettings() {
-  document.documentElement.setAttribute('data-theme', settings.light ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', settings.theme || (settings.light ? 'light' : 'dark'));
   document.getElementById('st-light').classList.toggle('on', settings.light);
   document.getElementById('st-compact').classList.toggle('on', settings.compact);
   document.getElementById('st-stable').classList.toggle('on', settings.stable);
   var gw = document.getElementById('grid-wrap');
   if (gw) gw.classList.toggle('compact', settings.compact);
+  document.querySelectorAll('.theme-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.theme === (settings.theme || (settings.light ? 'light' : 'dark'))); });
 }
 
 function formatBytes(b) {
@@ -2899,7 +2998,7 @@ if (window.location.protocol === 'file:' && !IS_LOCAL && typeof LOCAL_GAMES !== 
       }
     }
   });
-  renderSidebar();
+  renderGrid();
   document.getElementById('game-bar').style.display = 'none';
   document.getElementById('grid-toolbar').style.display = '';
   document.getElementById('frame-wrap').style.display = 'none';
