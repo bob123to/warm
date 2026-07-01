@@ -82,7 +82,7 @@
     "icon": "thumbnails/minecraft-1-12-2.png",
     "group": "Minecraft",
     "variant": "1.12.2 Eagler",
-    "size": 20103718,
+    "size": 23100000,
     "addons": [
       {
         "name": "Faithful 32x",
